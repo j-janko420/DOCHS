@@ -1,0 +1,16 @@
+{
+  "name": "dochs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DoorChisolution (DOCHS): floor-wise door schedules and editable 2D DXF door drawings from one door register.",
+  "type": "module",
+  "scripts": {
+    "compile": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/build.mjs",
+    "test": "tsc -p tsconfig.json && node --test \"build/tests/*.test.js\"",
+    "start": "node scripts/serve.mjs"
+  },
+  "devDependencies": {
+    "typescript": "6.0.2"
+  }
+}
