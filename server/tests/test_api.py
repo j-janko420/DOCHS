@@ -2,6 +2,7 @@ import os
 os.environ["APP_ENV"] = "test"
 os.environ["DORCHS_API_TOKEN"] = "test-token-which-is-long-enough-for-tests"
 os.environ["TRUSTED_HOSTS"] = "testserver,localhost"
+os.environ["ALLOWED_ORIGINS"] = "http://localhost:5173"
 
 from fastapi.testclient import TestClient
 from app.main import app
@@ -46,3 +47,39 @@ def test_chat_rejects_missing_auth():
             "provider": "xai", "messages": [{"role": "user", "content": "hello"}]
         })
         assert response.status_code == 401
+
+
+from app.providers import ProviderResult
+
+
+def test_cors_allows_only_listed_origins():
+    with TestClient(app) as client:
+        ok = client.options("/v1/providers", headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "GET", "Access-Control-Request-Headers": "authorization"})
+        assert ok.headers.get("access-control-allow-origin") == "http://localhost:5173"
+        bad = client.options("/v1/providers", headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "GET"})
+        assert "access-control-allow-origin" not in bad.headers
+
+
+def test_suggest_mapping_requires_auth():
+    with TestClient(app) as client:
+        assert client.post("/v1/dochs/suggest-mapping", json={"provider": "anthropic", "headers": ["Door No"]}).status_code == 401
+
+
+def test_suggest_mapping_validates_the_ai_answer(monkeypatch):
+    with TestClient(app) as client:
+        async def fake_chat(request):
+            assert request.messages[0].role == "system"
+            return ProviderResult("anthropic", "claude-opus-5-5", '{"mapping": ["mark", "nonsense", "fireRating"]}', {})
+        monkeypatch.setattr(client.app.state.providers, "chat", fake_chat)
+        response = client.post("/v1/dochs/suggest-mapping", headers=auth(), json={
+            "provider": "anthropic", "headers": ["Door No", "Zone", "FR"], "samples": [["D-1", "T", "1 HR"]]})
+        assert response.status_code == 200
+        body = response.json()
+        assert body["mapping"] == ["mark", "", "fireRating"]
+        assert any("unknown field" in n for n in body["notes"])
+
+
+def test_suggest_mapping_bounds_input():
+    with TestClient(app) as client:
+        response = client.post("/v1/dochs/suggest-mapping", headers=auth(), json={"provider": "anthropic", "headers": ["x" * 201]})
+        assert response.status_code == 422

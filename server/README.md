@@ -1,9 +1,29 @@
-# DORCHS Deployment Starter
+# DOCHS API server
 
-Docker-based web API starter for DORCHS, with a secure, extensible multi-provider AI connector.
+A Docker-based web API for DOCHS (DoorChisolution), with a secure multi-provider AI connector. Designed by i3 Design.
+
+This server is optional. The DOCHS web app (`../dochs`) runs fully without it. When connected, the server adds AI-assisted features, which are reviewed by the user before they change any data.
+
+## DOCHS integration
+
+- **`POST /v1/dochs/suggest-mapping`**
+  - Takes the column headers of an uploaded door schedule, plus up to 5 sample rows.
+  - Returns a suggested DOCHS field for each column.
+  - The model's answer is parsed and checked against the fixed field list in `app/dochs.py`, with one use per field. Unknown fields are dropped and listed in `notes`.
+  - The web app checks the answer again, merges it with its own automatic matching, and shows it for review before import.
+  - A DOCHS test keeps the field list identical to `dochs/src/core/importer.ts`.
+- **Connecting the web app:** in DOCHS go to **Project data > AI server**, enter the server URL and token, then use **Test connection**. The token is stored only in that browser. Provider API keys never leave the server.
+- **CORS:** set `ALLOWED_ORIGINS` to the web app's origin(s), e.g. `https://j-janko420.github.io`. Requests from other origins are refused by the browser.
+- **Claude defaults:**
+  - The default model is `claude-opus-5-5`.
+  - `temperature` is rejected with a clear message for Anthropic, because current Claude models refuse sampling parameters.
+  - A request declined by Claude's safety system comes back as HTTP 422 with the category. It is not returned as an empty answer.
+  - On the first-party Claude API, declined requests are retried server-side on Anthropic's recommended fallback model (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`). Set `ANTHROPIC_FALLBACKS=false` to turn this off.
+
+The environment variable `DORCHS_API_TOKEN` keeps its original name for compatibility with existing deployments.
 
 ## Included
-- FastAPI service with `/health/live`, `/health/ready`, `/v1/providers`, and `/v1/ai/chat`
+- FastAPI service with `/health/live`, `/health/ready`, `/v1/providers`, `/v1/ai/chat` and `/v1/dochs/suggest-mapping`
 - Provider adapters for Anthropic Claude, xAI Grok, and OpenAI-compatible APIs
 - API keys supplied only through server-side environment variables
 - Request validation, bounded request sizes, timeout handling, and sanitized provider errors
@@ -56,7 +76,7 @@ curl -X POST http://localhost:8080/v1/ai/chat \
   -H "Authorization: Bearer $DORCHS_API_TOKEN" \
   -d '{
     "provider": "anthropic",
-    "model": "claude-sonnet-4-20250514",
+    "model": "claude-opus-5-5",
     "messages": [{"role":"user","content":"Summarize these non-sensitive project notes."}],
     "max_tokens": 500
   }'

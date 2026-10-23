@@ -6,16 +6,20 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_env: str = "development"
-    app_name: str = "DORCHS API"
+    app_name: str = "DOCHS API"
     host: str = "0.0.0.0"
     port: int = 8080
     log_level: str = "INFO"
     dorchs_api_token: str = "development-only-token-change-me"
     trusted_hosts: str = "localhost,127.0.0.1,testserver"
+    # Browser origins allowed to call the API (the DOCHS web app), comma separated.
+    allowed_origins: str = "http://localhost:5173"
 
     anthropic_api_key: str = ""
     anthropic_base_url: str = "https://api.anthropic.com"
-    anthropic_default_model: str = "claude-sonnet-4-20250514"
+    anthropic_default_model: str = "claude-opus-5-5"
+    # Server-side refusal fallback on the first-party Claude API (beta).
+    anthropic_fallbacks: bool = True
 
     xai_api_key: str = ""
     xai_base_url: str = "https://api.x.ai/v1"
@@ -44,6 +48,9 @@ class Settings(BaseSettings):
 
     def allowed_hosts(self) -> list[str]:
         return [host.strip() for host in self.trusted_hosts.split(",") if host.strip()]
+
+    def cors_origins(self) -> list[str]:
+        return [o.strip().rstrip("/") for o in self.allowed_origins.split(",") if o.strip()]
 
 @lru_cache
 def get_settings() -> Settings:

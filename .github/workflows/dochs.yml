@@ -4,10 +4,12 @@ on:
   push:
     paths:
       - "dochs/**"
+      - "server/**"
       - ".github/workflows/dochs.yml"
   pull_request:
     paths:
       - "dochs/**"
+      - "server/**"
       - ".github/workflows/dochs.yml"
   workflow_dispatch:
 
@@ -37,6 +39,20 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dochs/dist
+
+  server-tests:
+    # DOCHS API server (server/): unit and API tests with mocked providers, no keys needed.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q
 
   deploy:
     # Publishes the default branch to GitHub Pages.

@@ -344,3 +344,16 @@ export function csvRows(text: string): string[][] {
   const width = Math.max(0, ...rows.map((r) => r.length));
   return rows.map((r) => Array.from({ length: width }, (_, i) => r[i] ?? ''));
 }
+
+// Combines an AI suggestion with the current matching: a suggestion fills or
+// changes a column, an empty suggestion keeps the current choice, and a field
+// moved to a new column is cleared from its old one (remarks may repeat).
+export function mergeMapping(current: Target[], suggested: Target[]): Target[] {
+  const out = current.map((c, i) => suggested[i] || c);
+  for (let i = 0; i < out.length; i++) {
+    const t = out[i];
+    if (!t || t === 'remarks' || !suggested[i]) continue;
+    out.forEach((u, j) => { if (j !== i && u === t && !suggested[j]) out[j] = ''; });
+  }
+  return out;
+}

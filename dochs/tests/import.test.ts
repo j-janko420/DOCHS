@@ -147,3 +147,22 @@ test('3D scene: finite geometry for every configuration; an LH leaf opened 90 de
   const maxZ = (fs: typeof open) => Math.max(...fs.flatMap((f) => f.pts.map((q) => q[2])));
   assert.ok(maxZ(open) > maxZ(closed) + 500);
 });
+
+test('server field list matches the importer field list', async () => {
+  const { readFileSync, existsSync } = await import('node:fs');
+  const path = '../server/app/dochs.py';
+  if (!existsSync(path)) return; // web app built on its own
+  const py = readFileSync(path, 'utf8');
+  const block = py.slice(py.indexOf('TARGETS: dict[str, str] = {'), py.indexOf('}', py.indexOf('TARGETS: dict[str, str] = {')));
+  const serverKeys = [...block.matchAll(/^\s+"([A-Za-z]+)":/gm)].map((m) => m[1]).sort();
+  const { TARGETS } = await import('../src/core/importer.js');
+  assert.deepEqual(serverKeys, TARGETS.map((t) => t.key).filter(Boolean).sort());
+});
+
+test('AI suggestions merge into the current matching without dropping good matches', async () => {
+  const { mergeMapping } = await import('../src/core/importer.js');
+  assert.deepEqual(mergeMapping(['mark', 'doorType', '', 'remarks'], ['', '', 'floor', '']), ['mark', 'doorType', 'floor', 'remarks']);
+  // a field moved by the AI is cleared from its old column
+  assert.deepEqual(mergeMapping(['mark', 'doorType', ''], ['', '', 'mark']), ['', 'doorType', 'mark']);
+  assert.deepEqual(mergeMapping(['remarks', ''], ['', 'remarks']), ['remarks', 'remarks']);
+});

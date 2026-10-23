@@ -1,10 +1,14 @@
 import { readXlsx, type Sheet } from '../../core/xlsx-read.js';
-import { TARGETS, autoMapping, csvRows, findHeaderRow, importRows, type ImportReport, type Target, type Units } from '../../core/importer.js';
+import { TARGETS, autoMapping, csvRows, findHeaderRow, importRows, mergeMapping, type ImportReport, type Target, type Units } from '../../core/importer.js';
 import { toCsv } from '../../core/export.js';
 import { CONFIG_LABEL } from '../../core/types.js';
 import { floorName } from '../../core/classify.js';
 import { download, h, safeName, toast } from '../dom.js';
 import { project, setProject, setUi } from '../state.js';
+import { aiServer, suggestMapping } from '../ai.js';
+
+let aiBusy = false;
+let aiNotes: string[] = [];
 
 // Upload a door schedule (xlsx / csv), check the column matching, preview, import.
 
@@ -42,6 +46,7 @@ async function load(file: File) {
   let best = 0, score = -1;
   sheets.forEach((s, i) => { const hr = findHeaderRow(s.rows); const n = hr >= 0 ? autoMapping(s.rows[hr]).filter(Boolean).length : 0; if (n > score) { score = n; best = i; } });
   selectSheet(best);
+  aiNotes = [];
   setUi({});
 }
 
@@ -100,8 +105,24 @@ export function importView(): HTMLElement {
           st.sheets.map((s, i) => h('option', { value: String(i), selected: i === st!.sheet }, `${s.name} (${s.rows.length} rows)`)))),
         h('label', { class: 'fld inline' }, h('span', {}, 'Header row'), h('select', { id: 'imp-hr', onchange: (e: Event) => { const hr = Number((e.target as HTMLSelectElement).value); set({ headerRow: hr, mapping: autoMapping(rows[hr] ?? []) }); } },
           rows.slice(0, 20).map((r, i) => h('option', { value: String(i), selected: i === st!.headerRow }, `Row ${i + 1}: ${r.filter(Boolean).slice(0, 4).join(', ').slice(0, 60)}`)))))),
-    h('section', { class: 'card' }, h('h3', {}, '2. Column matching'),
+    h('section', { class: 'card' }, h('div', { class: 'row gap' }, h('h3', { class: 'grow' }, '2. Column matching'),
+        aiServer() ? h('button', { class: 'btn sm', disabled: aiBusy, title: 'Ask the DOCHS AI server to suggest the matching; you review it before importing', onclick: async () => {
+          const srv = aiServer();
+          if (!srv || !st) return;
+          aiBusy = true; setUi({});
+          try {
+            const r = await suggestMapping(srv, header, rows.slice(st.headerRow + 1).filter((x) => x.some((c) => c.trim())).slice(0, 5));
+            const before = st.mapping;
+            const merged = mergeMapping(st.mapping, r.mapping);
+            st = { ...st, mapping: merged, report: null };
+            aiNotes = r.notes;
+            const changed = merged.filter((m, i) => m !== (before[i] ?? '')).length;
+            toast(`AI suggestion applied: ${changed} column(s) changed. Review before importing.`, 'ok');
+          } catch (e) { toast(`AI suggestion failed: ${(e as Error).message}`, 'err'); }
+          aiBusy = false; setUi({});
+        } }, aiBusy ? 'Asking AI...' : 'AI suggest') : h('span', { class: 'muted small' }, 'AI suggestions: connect a DOCHS server under Project data')),
       markMapped ? null : h('div', { class: 'alert warn' }, 'Choose which column holds the door number.'),
+      aiNotes.length ? h('div', { class: 'alert info' }, h('b', {}, 'AI notes: '), aiNotes.join(' ')) : null,
       h('div', { class: 'table-wrap flat' }, h('table', { class: 'grid dense edit' },
         h('thead', {}, h('tr', {}, ['Column in file', 'Sample values', 'Import as'].map((x) => h('th', {}, x)))),
         h('tbody', {}, header.map((col, i) => h('tr', { class: st!.mapping[i] ? '' : 'muted-row' },

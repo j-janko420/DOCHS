@@ -7,7 +7,8 @@ import { counts, validateDoor, validateScope } from '../../core/validate.js';
 import { hardwareTakeoff } from '../../core/schedule.js';
 import { exportProject, importProject, removeBuilding, removeCategory, removeFloor } from '../../core/project-ops.js';
 import { confirmButton, download, h, safeName, sevBadge, toast } from '../dom.js';
-import { addProject, allProjects, deleteProject, project, setProject, setUi, storageAvailable, switchProject } from '../state.js';
+import { aiServer, saveAiServer, testServer, type AiServer } from '../ai.js';
+import { addProject, allProjects, isDemo, deleteProject, project, setProject, setUi, storageAvailable, switchProject } from '../state.js';
 
 const guard = (f: () => void) => { try { f(); } catch (e) { toast((e as Error).message, 'err'); } };
 
@@ -162,10 +163,27 @@ export function dataView(): HTMLElement {
         h('p', {}, h('button', { class: 'btn', onclick: () => download(`${safeName(p.name)}_backup_${new Date().toISOString().slice(0, 10)}.json`, exportProject(p), 'application/json') }, 'Export JSON backup (current project)')),
         h('p', {}, h('button', { class: 'btn', onclick: () => file.click() }, 'Import JSON backup'), file),
         h('p', { class: 'muted small' }, 'Imports accept DOCHS backups. Fields added in later versions are filled as blank and flagged by QA.')),
+      isDemo() ? null : aiCard(),
       h('section', { class: 'card' }, h('h3', {}, 'Reference drawing extraction'),
         h('div', { class: 'alert warn' }, h('b', {}, 'Not configured. '), 'OCR / table extraction from PDF or images needs a server-side extraction service, which is not connected in this release. DOCHS does not simulate extraction. Enter doors manually or import a JSON backup.')),
       h('section', { class: 'card' }, h('h3', {}, 'Open doors by floor'),
         h('ul', { class: 'plain' }, p.floors.slice().sort((a, b) => a.order - b.order).map((f) => h('li', {}, `${floorName(p, f.id)}: ${p.doors.filter((d) => d.floorId === f.id && d.status !== 'approved').length} not approved`)))),
     ),
   );
+}
+
+// Optional DOCHS API server (server/ in the repository) for AI-assisted features.
+function aiCard(): HTMLElement {
+  const cur = aiServer();
+  const url = h('input', { id: 'ai-url', type: 'url', placeholder: 'https://your-dochs-server.example.com', value: cur?.url ?? '' }) as HTMLInputElement;
+  const token = h('input', { id: 'ai-token', type: 'password', placeholder: 'DOCHS server token', value: cur?.token ?? '', autocomplete: 'off' }) as HTMLInputElement;
+  const provider = h('select', { id: 'ai-provider' }, (['anthropic', 'xai', 'openai_compatible'] as const).map((p) => h('option', { value: p, selected: (cur?.provider ?? 'anthropic') === p }, p))) as HTMLSelectElement;
+  const read = (): AiServer => ({ url: url.value.trim(), token: token.value.trim(), provider: provider.value as AiServer['provider'] });
+  return h('section', { class: 'card' }, h('h3', {}, 'AI server (optional)'),
+    h('p', { class: 'muted small' }, 'Connect the DOCHS API server to get AI-suggested column matching on import. Provider API keys stay on the server; the server token is stored only in this browser. AI suggestions are always reviewed before anything is imported.'),
+    h('div', { class: 'fields' }, h('label', { class: 'fld wide' }, h('span', {}, 'Server URL'), url), h('label', { class: 'fld' }, h('span', {}, 'Token'), token), h('label', { class: 'fld' }, h('span', {}, 'AI provider'), provider)),
+    h('div', { class: 'row gap' },
+      h('button', { class: 'btn', onclick: async () => { try { toast(await testServer(read()), 'ok'); } catch (e) { toast(`Connection failed: ${(e as Error).message}`, 'err'); } } }, 'Test connection'),
+      h('button', { class: 'btn primary', onclick: () => { const s = read(); if (!/^https?:\/\//.test(s.url) || !s.token) { toast('Enter the server URL (https://...) and token', 'err'); return; } saveAiServer(s); toast('AI server saved in this browser', 'ok'); setUi({}); } }, 'Save'),
+      cur ? h('button', { class: 'btn ghost', onclick: () => { saveAiServer(null); toast('AI server removed from this browser', 'ok'); setUi({}); } }, 'Disconnect') : null));
 }

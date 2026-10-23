@@ -36,6 +36,15 @@ DOCHS turns a door register into floor-wise and category-wise door schedules and
   - Rotate and zoom, outside / inside / top views, open the leaf (swing, pivot, sliding), exploded view.
   - It is a visual model, not fabrication geometry.
 
+## Optional API server (`../server`)
+
+A FastAPI service, run with Docker, that keeps AI provider keys server-side. It adds **AI-suggested column matching** on the Import screen:
+- connect it under Project data > AI server;
+- suggestions are validated against the field list and merged with the automatic matching;
+- you review them before importing.
+
+See `server/README.md`. The web app works fully without it, and demo mode never uses it.
+
 ## Door library and Door Designer
 
 - **Door library (reference):** generic door types, materials, finishes and hardware types, each with what it does, plus typical hardware functions. Nothing in it is manufacturer data.
@@ -124,7 +133,7 @@ DOCHS turns a door register into floor-wise and category-wise door schedules and
 ```bash
 cd dochs
 npm install          # TypeScript only
-npm test             # 59 tests: geometry, QA rules, schedules, DXF structure, ZIP/XLSX
+npm test             # 61 tests: geometry, QA rules, schedules, DXF structure, ZIP/XLSX
 npm run build        # -> dist/ (static site)
 npm start            # http://localhost:5173
 ```

@@ -18,6 +18,8 @@ declare module 'node:assert/strict' {
 }
 declare module 'node:fs' {
   export function writeFileSync(p: string, data: string | Uint8Array): void;
+  export function readFileSync(p: string, enc: string): string;
+  export function existsSync(p: string): boolean;
   export function mkdirSync(p: string, o?: { recursive?: boolean }): void;
 }
 declare module 'node:child_process' {

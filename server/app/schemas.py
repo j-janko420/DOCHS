@@ -29,3 +29,31 @@ class ChatResponse(BaseModel):
     model: str
     text: str
     usage: dict[str, int] = {}
+
+
+class SuggestMappingRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    provider: Literal["anthropic", "xai", "openai_compatible"]
+    model: str | None = Field(default=None, min_length=1, max_length=150)
+    headers: list[str] = Field(min_length=1, max_length=80)
+    samples: list[list[str]] = Field(default_factory=list, max_length=5)
+
+    @field_validator("headers")
+    @classmethod
+    def headers_bounded(cls, headers):
+        if any(len(h) > 200 for h in headers):
+            raise ValueError("A column header is longer than 200 characters")
+        return headers
+
+    @field_validator("samples")
+    @classmethod
+    def samples_bounded(cls, samples):
+        if any(len(row) > 80 or any(len(c) > 200 for c in row) for row in samples):
+            raise ValueError("Sample rows are limited to 80 cells of 200 characters")
+        return samples
+
+class SuggestMappingResponse(BaseModel):
+    provider: str
+    model: str
+    mapping: list[str]
+    notes: list[str]

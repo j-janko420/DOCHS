@@ -10,6 +10,12 @@ class ProviderConfigurationError(Exception):
 class ProviderRequestError(Exception):
     pass
 
+class ProviderInputError(Exception):
+    """The request is valid in general but not accepted by the chosen provider."""
+
+class ProviderRefusal(Exception):
+    """The provider's safety system declined the request (HTTP 200 with a refusal)."""
+
 @dataclass
 class ProviderResult:
     provider: str
@@ -57,19 +63,25 @@ class AnthropicProvider(AIProvider):
         key = self.settings.anthropic_api_key
         if not key:
             raise ProviderConfigurationError("Anthropic API key is not configured")
+        if request.temperature is not None:
+            # Current Claude models reject sampling parameters with a 400.
+            raise ProviderInputError("temperature is not supported by current Claude models; omit it")
         model = request.model or self.settings.anthropic_default_model
         messages = [{"role": m.role, "content": m.content} for m in request.messages if m.role != "system"]
         systems = [m.content for m in request.messages if m.role == "system"]
         payload: dict[str, Any] = {"model": model, "max_tokens": request.max_tokens, "messages": messages}
         if systems:
             payload["system"] = "\n\n".join(systems)
-        if request.temperature is not None:
-            payload["temperature"] = request.temperature
-        data = await self._post(
-            self.settings.anthropic_base_url + "/v1/messages",
-            {"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-            payload,
-        )
+        headers = {"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"}
+        # Server-side refusal fallback exists only on the first-party Claude API.
+        if self.settings.anthropic_fallbacks and self.settings.anthropic_base_url.rstrip("/") == "https://api.anthropic.com":
+            headers["anthropic-beta"] = "server-side-fallback-2026-07-01"
+            payload["fallbacks"] = "default"
+        data = await self._post(self.settings.anthropic_base_url + "/v1/messages", headers, payload)
+        if data.get("stop_reason") == "refusal":
+            details = data.get("stop_details") or {}
+            category = details.get("category") if isinstance(details, dict) else None
+            raise ProviderRefusal("The provider declined this request" + (f" ({category})" if category else ""))
         text = "\n".join(block.get("text", "") for block in data.get("content", []) if block.get("type") == "text")
         usage = data.get("usage", {})
         return ProviderResult(self.name, data.get("model", model), text, {
