@@ -16,6 +16,21 @@ DOCHS turns a door register into floor-wise and category-wise door schedules and
    - dimensions, a title block and notes
 7. **Issue:** a ZIP package containing `schedule.xlsx` (4 sheets), CSVs, one DXF per door, one set DXF for the scope, `MANIFEST.txt` and a JSON backup.
 
+## Door library and Door Designer
+
+- **Door library (reference):** generic door types, materials, finishes and hardware types, each with what it does, plus typical hardware functions. Nothing in it is manufacturer data.
+  - Door types: timber, fire-rated, acoustic, steel, stainless, aluminium, glass, stone-clad, pivot, sliding and concealed.
+  - Materials and finishes: veneer, laminate (HPL), paint, powder coat, anodised, stainless, PVD, stone and glass.
+  - Hardware types: hinges, pivots, locks, cylinders, handles, closers, panic devices, bolts, seals, thresholds, stops, protection, access control and sliding gear.
+  - Typical hardware functions: passage, privacy, office, storeroom, fire door, exit, access controlled, push/pull and sliding.
+  - "Add all" copies items into the project libraries as unverified entries.
+- **Design your door (pop-up, or `#/designer` full page):**
+  1. Enter the structural opening width, height and wall thickness.
+  2. Click the style, configuration, handing, fire / acoustic rating, materials, finishes, glass and hardware function.
+  3. Leaf sizes are calculated from the opening using the frame-fit formula below, and the drawing sheet updates live.
+  4. "Add door to project" creates the door with linked materials and a hardware set. An identical set is reused, otherwise a new DD-xx set is created.
+  - Frame, gap, hinge, handle and vision-panel values are editable starting assumptions. The door is saved as Draft with a note to verify them.
+
 ## Hardware library (Phase 4)
 
 - **Catalogue:** products with category, manufacturer, model, finish, dimensions, mounting, fire rating, power need, source reference, verified flag and compatibility notes.
@@ -89,7 +104,7 @@ DOCHS turns a door register into floor-wise and category-wise door schedules and
 ```bash
 cd dochs
 npm install          # TypeScript only
-npm test             # 48 tests: geometry, QA rules, schedules, DXF structure, ZIP/XLSX
+npm test             # 54 tests: geometry, QA rules, schedules, DXF structure, ZIP/XLSX
 npm run build        # -> dist/ (static site)
 npm start            # http://localhost:5173
 ```

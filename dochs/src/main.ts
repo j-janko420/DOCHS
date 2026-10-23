@@ -5,9 +5,13 @@ import { drawingsView, qaView, scheduleView } from './ui/views/outputs.js';
 import { dashboardView, dataView, projectView } from './ui/views/setup.js';
 import { hardwareView } from './ui/views/hardware.js';
 import { materialsView } from './ui/views/materials.js';
+import { referenceView } from './ui/views/reference.js';
+import { designerView, openDesigner } from './ui/designer.js';
 
 const VIEWS: { key: string; label: string; icon: string; render: () => HTMLElement }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z', render: dashboardView },
+  { key: 'designer', label: 'Design your door', icon: 'M5 21V4h11v17M16 4l3 2v13l-3 2M12 12h1', render: designerView },
+  { key: 'reference', label: 'Door library', icon: 'M4 5h6v15H4zM10 5h4v15h-4zM15 6l4 1-3 13-4-1z', render: referenceView },
   { key: 'project', label: 'Project setup', icon: 'M4 21V8l8-5 8 5v13M9 21v-6h6v6', render: projectView },
   { key: 'doors', label: 'Door register', icon: 'M6 21V3h12v18M14 12h1M3 21h18', render: doorsView },
   { key: 'schedule', label: 'Schedules', icon: 'M3 5h18M3 10h18M3 15h18M3 20h18M9 5v15', render: scheduleView },
@@ -51,6 +55,7 @@ function shell(): HTMLElement {
       h('div', { class: 'brand' }, logo(), h('div', {}, h('div', { class: 'brand-name' }, 'DOCHS'), h('div', { class: 'brand-sub' }, 'DoorChisolution'))),
       h('label', { class: 'proj-switch' }, h('span', {}, 'Project'),
         h('select', { id: 'proj-select', onchange: (e: Event) => switchProject((e.target as HTMLSelectElement).value) }, allProjects().map((x) => h('option', { value: x.id, selected: x.id === p.id }, x.name)))),
+      h('button', { class: 'btn primary design-btn', onclick: () => openDesigner() }, '+ Design your door'),
       h('nav', { 'aria-label': 'Main' }, VIEWS.map((v) => h('a', { href: `#/${v.key}`, class: v.key === current.key ? 'on' : '', 'aria-current': v.key === current.key ? 'page' : undefined }, icon(v.icon), h('span', {}, v.label)))),
       h('div', { class: 'side-foot' }, 'Design - Draw - Detail - Schedule - Deliver', h('br'), h('span', {}, 'v0.1 - DXF R12 engine')),
     ),
