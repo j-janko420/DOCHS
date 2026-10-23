@@ -38,6 +38,28 @@ DOCHS turns a door register into floor-wise and category-wise door schedules and
 
   DOCHS never decides compatibility or compliance.
 
+## Material and finish library (Phase 4)
+
+- **Library:** leaf materials and systems, cores, facings, finishes, frames and glazing. Each item can record:
+  - manufacturer, product, code and thickness
+  - fire rating and acoustic rating, as stated by the source
+  - source reference, verified flag (requires a source), and material submittal reference and status
+- **CSV:** import/export. Unknown kinds or statuses and non-numeric thicknesses are reported, not guessed.
+- **Door links:** each door material field (leaf, core, facing, finishes, frame, frame finish, glazing) can link to a library item.
+  - Linking copies the library name into the field.
+  - Typing a different value removes the link.
+  - "Link door fields by name" links exact, unambiguous name matches only.
+- **QA:**
+  - unlinked fields
+  - links to deleted items
+  - vision panels without a glazing type
+  - fire-rated doors using materials stated as not fire-rated, or not stated
+  - leaf thickness differing from the linked leaf system
+  - submittals rejected or marked revise & resubmit
+  - approved doors with material submittals not yet approved
+  - duplicate library entries
+- **Material schedule:** every material in scope with submittal status, doors, door qty and finish leaf faces. It's in the Schedules tab, the Materials screen and the Excel export.
+
 ## CAD output
 
 - **Format:** ASCII DXF, AutoCAD R12 (`AC1009`), units in mm. Entities are LINE, POLYLINE, ARC, CIRCLE and TEXT, plus true **DIMENSION** entities, each backed by its own `*D` block.
@@ -67,7 +89,7 @@ DOCHS turns a door register into floor-wise and category-wise door schedules and
 ```bash
 cd dochs
 npm install          # TypeScript only
-npm test             # 41 tests: geometry, QA rules, schedules, DXF structure, ZIP/XLSX
+npm test             # 48 tests: geometry, QA rules, schedules, DXF structure, ZIP/XLSX
 npm run build        # -> dist/ (static site)
 npm start            # http://localhost:5173
 ```
@@ -89,7 +111,6 @@ Data is stored in the browser (localStorage) per device. Use **Project data > Ex
 | Team database, login, roles (Supabase/PostgreSQL) | Phase 6 |
 | OCR / drawing extraction | Not configured. Shown as unavailable in the app, never simulated |
 | DWG import/export | Needs a licensed engine |
-| Material / finish library | Next part of Phase 4 |
 
 ## Acceptance test before production use
 

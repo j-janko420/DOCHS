@@ -1,11 +1,12 @@
 import type { Door } from '../../core/types.js';
-import { CONFIG_LABEL } from '../../core/types.js';
+import { APPROVAL_LABEL, CONFIG_LABEL, MATERIAL_SLOTS } from '../../core/types.js';
 import { blankDoor } from '../../core/defaults.js';
 import { classify, floorName } from '../../core/classify.js';
 import { frameFit } from '../../core/geometry.js';
 import { counts, validateDoor } from '../../core/validate.js';
 import { duplicateDoor, patchDoor } from '../../core/project-ops.js';
 import { doorItemQty, itemLabel, itemSource, setFor } from '../../core/hardware.js';
+import { linkPatch, materialFor } from '../../core/materials.js';
 import { composeSheet } from '../../cad/sheet.js';
 import { toSvg } from '../../cad/svg.js';
 import { confirmButton, h, sevBadge, toast } from '../dom.js';
@@ -66,6 +67,7 @@ const GROUPS: { title: string; fields: Field[] }[] = [
   ] },
   { title: 'Vision panel, louvre, plates', fields: [
     { key: 'visionPanel', label: 'Vision panel', type: 'bool' },
+    { key: 'glazingType', label: 'Glazing type', type: 'text' },
     { key: 'vpWidth', label: 'VP width', type: 'num', unit: 'mm' },
     { key: 'vpHeight', label: 'VP height', type: 'num', unit: 'mm' },
     { key: 'vpFromTop', label: 'VP from top of leaf', type: 'num', unit: 'mm' },
@@ -99,6 +101,15 @@ const GROUPS: { title: string; fields: Field[] }[] = [
 ];
 
 function update(d: Door, patch: Partial<Door>) {
+  // typing over a linked material field breaks the link, so the text is never mislabelled as library data
+  if (!('materialIds' in patch)) {
+    const broken = MATERIAL_SLOTS.filter((s) => s.field in patch && d.materialIds[s.slot] && patch[s.field] !== d[s.field]);
+    if (broken.length) {
+      const ids = { ...d.materialIds };
+      for (const s of broken) delete ids[s.slot];
+      patch = { ...patch, materialIds: ids };
+    }
+  }
   setProject(patchDoor(project(), d.id, patch));
 }
 
@@ -127,6 +138,28 @@ function fieldInput(d: Door, f: Field, flagged: Set<string>): HTMLElement {
       } else update(d, { [f.key]: raw });
     },
   }));
+}
+
+// Library links for the door's material fields.
+function materialLinks(d: Door): HTMLElement {
+  const p = project();
+  return h('fieldset', {}, h('legend', {}, 'Material library links'),
+    h('div', { class: 'table-wrap flat' }, h('table', { class: 'grid dense edit' },
+      h('thead', {}, h('tr', {}, ['Field', 'Door value', 'Library item', 'Submittal'].map((x) => h('th', {}, x)))),
+      h('tbody', {}, MATERIAL_SLOTS.filter((s) => s.slot !== 'glazing' || d.visionPanel).map((s) => {
+        const m = materialFor(p, d, s.slot);
+        const options = p.materials.filter((x) => x.kind === s.kind);
+        return h('tr', {},
+          h('td', {}, s.label),
+          h('td', {}, String(d[s.field] ?? '') || h('span', { class: 'muted' }, 'blank')),
+          h('td', {}, h('select', { id: `ml-${d.id}-${s.slot}`, onchange: (e: Event) => {
+            const id = (e.target as HTMLSelectElement).value;
+            update(d, linkPatch(d, s.slot, p.materials.find((x) => x.id === id) ?? null));
+          } }, h('option', { value: '', selected: !m }, options.length ? '- not linked -' : '- no library items of this kind -'),
+            options.map((x) => h('option', { value: x.id, selected: x.id === m?.id }, `${x.name}${x.manufacturer ? ` - ${x.manufacturer}` : ''}${x.verified ? '' : ' (unverified)'}`)))),
+          h('td', { class: 'small' }, m ? [APPROVAL_LABEL[m.approval], m.approvalRef ? ` (${m.approvalRef})` : ''] : '-'));
+      })))),
+    h('p', { class: 'muted small' }, 'Linking sets the door value to the library name. Manage items under Materials.'));
 }
 
 // Set lines for this door with computed quantities and door-level overrides.
@@ -187,6 +220,7 @@ function editor(d: Door): HTMLElement {
     h('div', { class: 'editor-grid' },
       h('div', { class: 'editor-form' },
         GROUPS.map((g) => h('fieldset', {}, h('legend', {}, g.title), h('div', { class: 'fields' }, g.fields.map((f) => fieldInput(d, f, flagged))))),
+        materialLinks(d),
         hardwareLines(d),
         p.categories.length ? h('fieldset', {}, h('legend', {}, 'Project categories'), h('div', { class: 'fields' }, p.categories.map((cat) =>
           h('label', { class: 'fld check' }, h('input', { id: `cat-${d.id}-${cat.id}`, type: 'checkbox', checked: d.categoryIds.includes(cat.id), onchange: (e: Event) => update(d, { categoryIds: (e.target as HTMLInputElement).checked ? [...d.categoryIds, cat.id] : d.categoryIds.filter((x) => x !== cat.id) }) }), h('span', {}, cat.name))))) : null,

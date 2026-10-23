@@ -55,6 +55,7 @@ export function importProject(text: string): Project {
     items: (s.items ?? []).map((it) => ({ ...it, id: it.id || uid('hwi'), catalogueId: it.catalogueId ?? '' })),
   }));
   project.catalogue = pr.catalogue ?? [];
+  project.materials = pr.materials ?? [];
   project.incompatibilities = pr.incompatibilities ?? [];
   project.revisions = pr.revisions ?? [];
   project.doors = pr.doors.map((d) => blankDoor({ ...(d as Partial<Door>), id: (d as Door).id || uid('door') }));

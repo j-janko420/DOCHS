@@ -4,6 +4,7 @@ import { doorSchedule, hardwareTable, issuesTable, productTable, quantitySummary
 import { toCsv, xlsx, zip, type ZipEntry } from '../core/export.js';
 import { drawable } from '../core/validate.js';
 import { exportProject } from '../core/project-ops.js';
+import { materialSchedule } from '../core/materials.js';
 import { composeSet, composeSheet, type Sheet } from '../cad/sheet.js';
 import { toDxf } from '../cad/dxf.js';
 import { toSvg } from '../cad/svg.js';
@@ -57,7 +58,7 @@ export function setDxf(p: Project, doors: Door[]): { dxf: string; ok: Door[]; bl
 }
 
 export function scheduleTables(p: Project, doors: Door[]) {
-  return [doorSchedule(p, doors), quantitySummary(p, doors), hardwareTable(p, doors), productTable(p, doors), issuesTable(p, doors)];
+  return [doorSchedule(p, doors), quantitySummary(p, doors), hardwareTable(p, doors), productTable(p, doors), materialSchedule(p, doors), issuesTable(p, doors)];
 }
 
 export function exportXlsx(p: Project, doors: Door[]) {

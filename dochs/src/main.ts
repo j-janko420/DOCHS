@@ -4,6 +4,7 @@ import { doorsView } from './ui/views/doors.js';
 import { drawingsView, qaView, scheduleView } from './ui/views/outputs.js';
 import { dashboardView, dataView, projectView } from './ui/views/setup.js';
 import { hardwareView } from './ui/views/hardware.js';
+import { materialsView } from './ui/views/materials.js';
 
 const VIEWS: { key: string; label: string; icon: string; render: () => HTMLElement }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z', render: dashboardView },
@@ -12,6 +13,7 @@ const VIEWS: { key: string; label: string; icon: string; render: () => HTMLEleme
   { key: 'schedule', label: 'Schedules', icon: 'M3 5h18M3 10h18M3 15h18M3 20h18M9 5v15', render: scheduleView },
   { key: 'drawings', label: '2D CAD studio', icon: 'M4 20h16M4 20V4m0 16L20 4M8 8h3M8 12h6', render: drawingsView },
   { key: 'hardware', label: 'Hardware', icon: 'M14 7a4 4 0 1 0-4 4l-6 6 3 3 6-6a4 4 0 0 0 1-7z', render: hardwareView },
+  { key: 'materials', label: 'Materials', icon: 'M4 7l8-4 8 4-8 4zM4 12l8 4 8-4M4 17l8 4 8-4', render: materialsView },
   { key: 'qa', label: 'QA checks', icon: 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z M9 12l2 2 4-4', render: qaView },
   { key: 'data', label: 'Project data', icon: 'M4 6c0-2 16-2 16 0v12c0 2-16 2-16 0zM4 6c0 2 16 2 16 0M4 12c0 2 16 2 16 0', render: dataView },
 ];

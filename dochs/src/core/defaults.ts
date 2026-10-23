@@ -1,4 +1,5 @@
-import type { CatalogueItem, Door, HardwareCategory, HardwareItem, Project } from './types.js';
+import type { CatalogueItem, Door, HardwareCategory, HardwareItem, MaterialItem, MaterialKind, Project } from './types.js';
+import { autoLink } from './materials.js';
 
 export function uid(prefix = 'id'): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
@@ -42,6 +43,7 @@ export function blankDoor(partial: Partial<Door> = {}): Door {
     finishSide1: '',
     finishSide2: '',
     visionPanel: false,
+    glazingType: '',
     vpWidth: null,
     vpHeight: null,
     vpFromTop: null,
@@ -61,6 +63,7 @@ export function blankDoor(partial: Partial<Door> = {}): Door {
     hingePositions: '',
     pivotOffset: null,
     hardwareOverrides: [],
+    materialIds: {},
     threshold: '',
     floorFinish: '',
     sourceRef: '',
@@ -99,6 +102,7 @@ export function blankProject(name = 'New project'): Project {
     categories: [],
     hardwareSets: [],
     catalogue: [],
+    materials: [],
     incompatibilities: [],
     revisions: [],
     doors: [],
@@ -145,7 +149,7 @@ export function sampleProject(): Project {
       mark: 'D-G01', doorType: 'DT-01', buildingId: bld, floorId: 'flr_g', room: 'Office 001', location: 'Ground corridor',
       quantity: 1, configuration: 'single', handing: 'LH', openingAngle: 90,
       openingWidth: 1000, openingHeight: 2200, leafWidth1: 914, leafHeight: 2149,
-      ...frame, ...leaf, visionPanel: true, vpWidth: 150, vpHeight: 1000, vpFromTop: 300,
+      ...frame, ...leaf, visionPanel: true, glazingType: 'Clear toughened glass', vpWidth: 150, vpHeight: 1000, vpFromTop: 300,
       hardwareSet: 'HW-01', handleHeight: 1050, backset: 60, hingePositions: '250,1050,1900', threshold: 'None', floorFinish: 'Carpet',
       sourceRef: 'Sample', status: 'approved', categoryIds: [],
     }),
@@ -162,7 +166,7 @@ export function sampleProject(): Project {
       quantity: 1, configuration: 'double-unequal', handing: 'LHR', openingAngle: 90,
       openingWidth: 1500, openingHeight: 2400, leafWidth1: 914, leafWidth2: 497, leafHeight: 2349,
       ...frame, ...leaf, leafMaterial: 'Aluminium', leafCore: '', leafFacing: 'Glazed', finishSide1: 'Anodised', finishSide2: 'Anodised',
-      visionPanel: true, vpWidth: 300, vpHeight: 1600, vpFromTop: 250, accessControl: true,
+      visionPanel: true, glazingType: 'Clear toughened glass', vpWidth: 300, vpHeight: 1600, vpFromTop: 250, accessControl: true,
       hardwareSet: 'HW-04', handleHeight: 1050, hingePositions: '250,1150,2100', threshold: 'Weather bar', floorFinish: 'Stone',
       sourceRef: 'Sample', status: 'draft', categoryIds: ['cat_ext'],
     }),
@@ -225,7 +229,19 @@ export function sampleProject(): Project {
   const hw = (catalogueId: string, qty: number, basis: 'per-door' | 'per-leaf'): HardwareItem => ({
     id: `hwi_${++n}`, catalogueId, item: catalogue.find((c) => c.id === catalogueId)!.description, qty, basis, manufacturer: '', model: '', finish: '',
   });
-  return {
+  // Generic, unverified library entries named like the sample door data.
+  const mat = (id: string, kind: MaterialKind, name: string): MaterialItem => ({
+    id, kind, name, manufacturer: '', product: '', code: '', thickness: null, fireRated: '', fireRating: '', acoustic: '', sourceRef: '', approvalRef: '', approval: '', verified: false, notes: '',
+  });
+  const materials: MaterialItem[] = [
+    mat('mat_timber', 'leaf', 'Timber'), mat('mat_steel_leaf', 'leaf', 'Steel'), mat('mat_alu', 'leaf', 'Aluminium'),
+    mat('mat_solid', 'core', 'Solid core'), mat('mat_mineral', 'core', 'Mineral core'),
+    mat('mat_veneer', 'facing', 'Veneer'), mat('mat_sheet', 'facing', 'Steel sheet'), mat('mat_glazed', 'facing', 'Glazed'),
+    mat('mat_oak', 'finish', 'Natural oak'), mat('mat_paint', 'finish', 'Paint'), mat('mat_anod', 'finish', 'Anodised'), mat('mat_pc', 'finish', 'Powder coated'),
+    mat('mat_steel_frame', 'frame', 'Steel'),
+    mat('mat_toughened', 'glazing', 'Clear toughened glass'),
+  ];
+  return autoLink({
     id: 'prj_sample',
     name: 'Sample Office Building',
     number: 'SAMPLE-001',
@@ -261,8 +277,9 @@ export function sampleProject(): Project {
       { code: 'HW-06', description: 'Pivot', items: [hw('cat_floorpivot', 1, 'per-leaf'), hw('cat_toppivot', 1, 'per-leaf'), hw('cat_pull', 1, 'per-door')] },
     ],
     catalogue,
+    materials,
     incompatibilities: [],
     revisions: [{ rev: 'P01', date: new Date().toISOString().slice(0, 10), description: 'Sample data issue', by: 'DOCHS' }],
     doors,
-  };
+  }).project;
 }

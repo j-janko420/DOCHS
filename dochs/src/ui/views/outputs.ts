@@ -23,13 +23,13 @@ export function scheduleView(): HTMLElement {
   const doors = filteredDoors();
   const tables = scheduleTables(p, doors);
   const t = tables[tab];
-  const tabs = ['Door schedule', 'Quantity summary', 'Hardware by set', 'Hardware by product', 'QA issues'];
+  const tabs = ['Door schedule', 'Quantity summary', 'Hardware by set', 'Hardware by product', 'Materials', 'QA issues'];
   return h('div', { class: 'view' },
     h('div', { class: 'view-head' },
       h('div', {}, h('h1', {}, 'Door schedule'), h('p', { class: 'muted' }, `Scope: ${scopeLabel(p)}. Generated live from the door register; the drawings use the same records.`)),
       h('div', { class: 'row gap' },
         h('button', { class: 'btn', onclick: () => exportCsv(p, doors, tab) }, `CSV (${tabs[tab].toLowerCase()})`),
-        h('button', { class: 'btn', onclick: () => exportXlsx(p, doors) }, 'Excel (.xlsx, 5 sheets)'),
+        h('button', { class: 'btn', onclick: () => exportXlsx(p, doors) }, 'Excel (.xlsx, 6 sheets)'),
         h('button', { class: 'btn primary', onclick: () => exportPackage(p, doors) }, 'Issue package (.zip)'))),
     filterBar({ status: true, search: true }),
     h('div', { class: 'tabs', role: 'tablist' }, tabs.map((name, i) => h('button', { role: 'tab', 'aria-selected': i === tab ? 'true' : 'false', class: `tab ${i === tab ? 'on' : ''}`, onclick: () => { tab = i; setUi({}); } }, name))),
