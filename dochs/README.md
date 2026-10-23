@@ -16,6 +16,28 @@ DOCHS turns a door register into floor-wise and category-wise door schedules and
    - dimensions, a title block and notes
 7. **Issue:** a ZIP package containing `schedule.xlsx` (4 sheets), CSVs, one DXF per door, one set DXF for the scope, `MANIFEST.txt` and a JSON backup.
 
+## Hardware library (Phase 4)
+
+- **Catalogue:** products with category, manufacturer, model, finish, dimensions, mounting, fire rating, power need, source reference, verified flag and compatibility notes.
+  - Values come from manufacturer sources only. A product can be marked verified only once it has a source reference.
+  - CSV import/export lets you load or share manufacturer libraries. Rows with an unknown category or no description are reported, not guessed.
+- **Sets:** each line links to a catalogue product (or stays as free text, flagged as info), with a quantity and a per-door or per-leaf basis.
+- **Quantities:** per door = qty x door qty. Per leaf = qty x door qty x leaves.
+- **Overrides:** a door can override any line's total. A reason is required, and every override is listed in the takeoff.
+- **Takeoff:** by set (with the calculation basis) and by product across sets. Both are included in the Excel export.
+- **Hardware QA:**
+  - empty sets and duplicate set codes
+  - the same product listed twice in a set, or a link to a deleted product
+  - zero quantities
+  - overrides with no reason, or for items not in the door's set
+  - incompatibilities, only where a rule you entered says so, with its source
+  - fire-rated doors using products stated as not fire-rated, or with fire rating not stated
+  - access-control mismatches between door and set
+  - powered products needing electrical coordination
+  - pair doors with no inactive-leaf hardware
+
+  DOCHS never decides compatibility or compliance.
+
 ## CAD output
 
 - **Format:** ASCII DXF, AutoCAD R12 (`AC1009`), units in mm. Entities are LINE, POLYLINE, ARC, CIRCLE and TEXT, plus true **DIMENSION** entities, each backed by its own `*D` block.
@@ -45,7 +67,7 @@ DOCHS turns a door register into floor-wise and category-wise door schedules and
 ```bash
 cd dochs
 npm install          # TypeScript only
-npm test             # 31 tests: geometry, QA rules, schedules, DXF structure, ZIP/XLSX
+npm test             # 41 tests: geometry, QA rules, schedules, DXF structure, ZIP/XLSX
 npm run build        # -> dist/ (static site)
 npm start            # http://localhost:5173
 ```
@@ -67,7 +89,7 @@ Data is stored in the browser (localStorage) per device. Use **Project data > Ex
 | Team database, login, roles (Supabase/PostgreSQL) | Phase 6 |
 | OCR / drawing extraction | Not configured. Shown as unavailable in the app, never simulated |
 | DWG import/export | Needs a licensed engine |
-| Manufacturer hardware/material libraries | Project hardware sets only. No product data is invented |
+| Material / finish library | Next part of Phase 4 |
 
 ## Acceptance test before production use
 

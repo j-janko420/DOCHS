@@ -1,8 +1,8 @@
-import type { HardwareItem, Project } from '../../core/types.js';
+import type { Project } from '../../core/types.js';
 import { leafCount } from '../../core/types.js';
 import { blankProject, sampleProject, uid } from '../../core/defaults.js';
 import { floorName, isRated } from '../../core/classify.js';
-import { counts, validateDoor } from '../../core/validate.js';
+import { counts, validateDoor, validateScope } from '../../core/validate.js';
 import { hardwareTakeoff } from '../../core/schedule.js';
 import { exportProject, importProject, removeBuilding, removeCategory, removeFloor } from '../../core/project-ops.js';
 import { confirmButton, download, h, safeName, sevBadge, toast } from '../dom.js';
@@ -17,7 +17,7 @@ function textInput(id: string, value: string, on: (v: string) => void, attrs: Re
 // ---------- dashboard ----------
 export function dashboardView(): HTMLElement {
   const p = project();
-  const all = p.doors.flatMap((d) => validateDoor(d, p));
+  const all = validateScope(p, p.doors);
   const c = counts(all);
   const qty = p.doors.reduce((s, d) => s + (d.quantity ?? 0), 0);
   const leaves = p.doors.reduce((s, d) => s + (d.quantity ?? 0) * (d.configuration ? leafCount(d.configuration) : 0), 0);
@@ -125,38 +125,6 @@ export function projectView(): HTMLElement {
             h('td', {}, h('button', { class: 'btn ghost sm', onclick: () => set({ revisions: p.revisions.filter((_, j) => j !== i) }) }, 'Remove')))))),
         h('button', { class: 'btn sm', onclick: () => set({ revisions: [...p.revisions, { rev: p.revision, date: new Date().toISOString().slice(0, 10), description: '', by: p.preparedBy }] }) }, '+ Add revision')),
     ),
-  );
-}
-
-// ---------- hardware library ----------
-export function hardwareView(): HTMLElement {
-  const p = project();
-  const set = (sets: Project['hardwareSets']) => setProject({ ...project(), hardwareSets: sets });
-  const tk = hardwareTakeoff(p, p.doors);
-  const itemRow = (si: number, ii: number, it: HardwareItem) => h('tr', {},
-    h('td', {}, textInput(`hw-${si}-${ii}-item`, it.item, (v) => upd(si, ii, { item: v }))),
-    h('td', {}, h('input', { id: `hw-${si}-${ii}-qty`, type: 'number', min: 0, step: 1, value: it.qty, onchange: (e: Event) => upd(si, ii, { qty: Number((e.target as HTMLInputElement).value) || 0 }) })),
-    h('td', {}, h('select', { id: `hw-${si}-${ii}-basis`, onchange: (e: Event) => upd(si, ii, { basis: (e.target as HTMLSelectElement).value as HardwareItem['basis'] }) },
-      h('option', { value: 'per-door', selected: it.basis === 'per-door' }, 'per door'), h('option', { value: 'per-leaf', selected: it.basis === 'per-leaf' }, 'per leaf'))),
-    ...(['manufacturer', 'model', 'finish'] as const).map((k) => h('td', {}, textInput(`hw-${si}-${ii}-${k}`, it[k], (v) => upd(si, ii, { [k]: v })))),
-    h('td', {}, h('button', { class: 'btn ghost sm', onclick: () => set(p.hardwareSets.map((s, j) => (j === si ? { ...s, items: s.items.filter((_, k) => k !== ii) } : s))) }, 'Remove')));
-  const upd = (si: number, ii: number, patch: Partial<HardwareItem>) => set(p.hardwareSets.map((s, j) => (j === si ? { ...s, items: s.items.map((x, k) => (k === ii ? { ...x, ...patch } : x)) } : s)));
-  return h('div', { class: 'view' },
-    h('div', { class: 'view-head' }, h('div', {}, h('h1', {}, 'Hardware library'), h('p', { class: 'muted' }, 'Project hardware sets. Quantities = item qty x door qty (x leaves for per-leaf items). Enter manufacturer data from verified sources only; DOCHS does not assume compatibility.')),
-      h('button', { class: 'btn primary', onclick: () => set([...p.hardwareSets, { code: `HW-${String(p.hardwareSets.length + 1).padStart(2, '0')}`, description: '', items: [] }]) }, '+ Add set')),
-    p.hardwareSets.map((s, si) => h('section', { class: 'card' },
-      h('div', { class: 'row gap' },
-        h('label', { class: 'fld inline' }, h('span', {}, 'Code'), textInput(`hws-${si}-code`, s.code, (v) => set(p.hardwareSets.map((x, j) => (j === si ? { ...x, code: v } : x))))),
-        h('label', { class: 'fld inline grow' }, h('span', {}, 'Description'), textInput(`hws-${si}-desc`, s.description, (v) => set(p.hardwareSets.map((x, j) => (j === si ? { ...x, description: v } : x))))),
-        h('span', { class: 'muted small' }, `Used by: ${p.doors.filter((d) => d.hardwareSet === s.code).map((d) => d.mark).join(', ') || 'no doors'}`),
-        h('button', { class: 'btn ghost sm', onclick: () => set(p.hardwareSets.filter((_, j) => j !== si)) }, 'Remove set')),
-      h('div', { class: 'table-wrap' }, h('table', { class: 'grid dense' }, h('thead', {}, h('tr', {}, ['Item', 'Qty', 'Basis', 'Manufacturer', 'Model', 'Finish', ''].map((x) => h('th', {}, x)))),
-        h('tbody', {}, s.items.map((it, ii) => itemRow(si, ii, it))))),
-      h('button', { class: 'btn sm', onclick: () => set(p.hardwareSets.map((x, j) => (j === si ? { ...x, items: [...x.items, { item: '', qty: 1, basis: 'per-door', manufacturer: '', model: '', finish: '' }] } : x))) }, '+ Add item'))),
-    h('section', { class: 'card' }, h('h3', {}, 'Project takeoff (all doors)'),
-      h('div', { class: 'table-wrap' }, h('table', { class: 'grid dense' }, h('thead', {}, h('tr', {}, ['Set', 'Item', 'Quantity', 'Calculation basis'].map((x) => h('th', {}, x)))),
-        h('tbody', {}, tk.lines.map((l) => h('tr', {}, h('td', { class: 'mono' }, l.set), h('td', {}, l.item), h('td', { class: 'num' }, String(l.quantity)), h('td', { class: 'small' }, l.basis)))))),
-      tk.unresolved.length ? h('div', { class: 'alert warn' }, h('b', {}, 'Unresolved: '), tk.unresolved.join('; ')) : null),
   );
 }
 

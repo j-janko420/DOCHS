@@ -206,3 +206,15 @@ ul.pick button.on { background: var(--acc-soft); border-color: var(--acc); }
   .sheet-host { height: 60vh; }
 }
 @media print { .side, .toolbar, .filterbar { display: none; } }
+
+/* hardware library */
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.grid.edit td { padding: 3px 4px; }
+.grid.edit input[type="text"], .grid.edit select { min-width: 110px; }
+.grid input.qty { width: 72px; min-width: 0; }
+.grid td.center { text-align: center; }
+.grid tr.unverified td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
+input.need { border-color: var(--err); }
+.link-row { cursor: pointer; }
+.link-row:hover { color: var(--acc); }
+.grid.edit input.desc { min-width: 240px; }

@@ -5,6 +5,7 @@ import { classify, floorName } from '../../core/classify.js';
 import { frameFit } from '../../core/geometry.js';
 import { counts, validateDoor } from '../../core/validate.js';
 import { duplicateDoor, patchDoor } from '../../core/project-ops.js';
+import { doorItemQty, itemLabel, itemSource, setFor } from '../../core/hardware.js';
 import { composeSheet } from '../../cad/sheet.js';
 import { toSvg } from '../../cad/svg.js';
 import { confirmButton, h, sevBadge, toast } from '../dom.js';
@@ -128,6 +129,38 @@ function fieldInput(d: Door, f: Field, flagged: Set<string>): HTMLElement {
   }));
 }
 
+// Set lines for this door with computed quantities and door-level overrides.
+function hardwareLines(d: Door): HTMLElement {
+  const p = project();
+  const s = setFor(p, d);
+  if (!s) return h('fieldset', {}, h('legend', {}, 'Hardware set items'), h('p', { class: 'muted' }, d.hardwareSet.trim() ? `Set ${d.hardwareSet} is not in the hardware library.` : 'No hardware set assigned.'));
+  const setOverride = (itemId: string, qty: number | null, reason?: string) => {
+    const rest = d.hardwareOverrides.filter((o) => o.itemId !== itemId);
+    const cur = d.hardwareOverrides.find((o) => o.itemId === itemId);
+    const next = qty === null ? rest : [...rest, { itemId, qty, reason: reason ?? cur?.reason ?? '', by: p.preparedBy || 'user', at: new Date().toISOString() }];
+    update(d, { hardwareOverrides: next });
+  };
+  return h('fieldset', {}, h('legend', {}, `Hardware set items - ${s.code}`),
+    h('div', { class: 'table-wrap flat' }, h('table', { class: 'grid dense edit' },
+      h('thead', {}, h('tr', {}, ['Item', 'Product', 'Rule', 'Qty', 'Override qty', 'Reason (required)'].map((x) => h('th', {}, x)))),
+      h('tbody', {}, s.items.map((it) => {
+        const ov = d.hardwareOverrides.find((o) => o.itemId === it.id);
+        const base = doorItemQty({ ...d, hardwareOverrides: [] }, it);
+        const src = itemSource(p, it);
+        return h('tr', {},
+          h('td', {}, itemLabel(p, it)),
+          h('td', { class: 'small' }, [src.manufacturer, src.model].filter(Boolean).join(' ') || h('span', { class: 'muted' }, 'not specified'), src.verified ? '' : h('span', { class: 'badge sev-warning', title: 'Not verified against a manufacturer source' }, 'unverified')),
+          h('td', { class: 'small nowrap' }, `${it.qty} ${it.basis}`),
+          h('td', { class: 'num' }, ov ? h('s', {}, String(base.qty)) : String(base.qty), ov ? ` ${ov.qty}` : ''),
+          h('td', {}, h('input', { id: `ov-${d.id}-${it.id}-q`, type: 'number', min: 0, step: 1, class: 'qty', value: ov ? ov.qty : '', placeholder: 'none', onchange: (e: Event) => {
+            const raw = (e.target as HTMLInputElement).value.trim();
+            setOverride(it.id, raw === '' ? null : Math.max(0, Math.round(Number(raw)) || 0));
+          } })),
+          h('td', {}, ov ? h('input', { id: `ov-${d.id}-${it.id}-r`, type: 'text', value: ov.reason, placeholder: 'why this differs', class: ov.reason ? '' : 'need', onchange: (e: Event) => setOverride(it.id, ov.qty, (e.target as HTMLInputElement).value.trim()) }) : h('span', { class: 'muted small' }, '-')));
+      })))),
+    h('p', { class: 'muted small' }, 'Override replaces the computed quantity for this door record. A reason is required; overrides are listed in the hardware takeoff.'));
+}
+
 function editor(d: Door): HTMLElement {
   const p = project();
   const issues = validateDoor(d, p);
@@ -154,6 +187,7 @@ function editor(d: Door): HTMLElement {
     h('div', { class: 'editor-grid' },
       h('div', { class: 'editor-form' },
         GROUPS.map((g) => h('fieldset', {}, h('legend', {}, g.title), h('div', { class: 'fields' }, g.fields.map((f) => fieldInput(d, f, flagged))))),
+        hardwareLines(d),
         p.categories.length ? h('fieldset', {}, h('legend', {}, 'Project categories'), h('div', { class: 'fields' }, p.categories.map((cat) =>
           h('label', { class: 'fld check' }, h('input', { id: `cat-${d.id}-${cat.id}`, type: 'checkbox', checked: d.categoryIds.includes(cat.id), onchange: (e: Event) => update(d, { categoryIds: (e.target as HTMLInputElement).checked ? [...d.categoryIds, cat.id] : d.categoryIds.filter((x) => x !== cat.id) }) }), h('span', {}, cat.name))))) : null,
         h('fieldset', {}, h('legend', {}, 'Review comments'),

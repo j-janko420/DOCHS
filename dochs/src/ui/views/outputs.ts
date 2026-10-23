@@ -1,6 +1,6 @@
 import type { Table } from '../../core/schedule.js';
 import { floorName } from '../../core/classify.js';
-import { counts, drawable, validateDoor, type Severity } from '../../core/validate.js';
+import { counts, drawable, validateScope, type Severity } from '../../core/validate.js';
 import { LAYERS } from '../../cad/entities.js';
 import { MAIN_SCALE_OPTIONS, SHEETS, type SheetSize } from '../../cad/sheet.js';
 import { toSvg } from '../../cad/svg.js';
@@ -23,13 +23,13 @@ export function scheduleView(): HTMLElement {
   const doors = filteredDoors();
   const tables = scheduleTables(p, doors);
   const t = tables[tab];
-  const tabs = ['Door schedule', 'Quantity summary', 'Hardware takeoff', 'QA issues'];
+  const tabs = ['Door schedule', 'Quantity summary', 'Hardware by set', 'Hardware by product', 'QA issues'];
   return h('div', { class: 'view' },
     h('div', { class: 'view-head' },
       h('div', {}, h('h1', {}, 'Door schedule'), h('p', { class: 'muted' }, `Scope: ${scopeLabel(p)}. Generated live from the door register; the drawings use the same records.`)),
       h('div', { class: 'row gap' },
         h('button', { class: 'btn', onclick: () => exportCsv(p, doors, tab) }, `CSV (${tabs[tab].toLowerCase()})`),
-        h('button', { class: 'btn', onclick: () => exportXlsx(p, doors) }, 'Excel (.xlsx, 4 sheets)'),
+        h('button', { class: 'btn', onclick: () => exportXlsx(p, doors) }, 'Excel (.xlsx, 5 sheets)'),
         h('button', { class: 'btn primary', onclick: () => exportPackage(p, doors) }, 'Issue package (.zip)'))),
     filterBar({ status: true, search: true }),
     h('div', { class: 'tabs', role: 'tablist' }, tabs.map((name, i) => h('button', { role: 'tab', 'aria-selected': i === tab ? 'true' : 'false', class: `tab ${i === tab ? 'on' : ''}`, onclick: () => { tab = i; setUi({}); } }, name))),
@@ -123,7 +123,10 @@ let sevFilter: Severity | '' = '';
 export function qaView(): HTMLElement {
   const p = project();
   const doors = filteredDoors();
-  const all = doors.flatMap((d) => validateDoor(d, p).map((i) => ({ ...i, floor: floorName(p, d.floorId) })));
+  const all = validateScope(p, doors).map((i) => {
+    const d = p.doors.find((x) => x.id === i.doorId);
+    return { ...i, floor: d ? floorName(p, d.floorId) : 'Hardware set' };
+  });
   const c = counts(all);
   const list = all.filter((i) => !sevFilter || i.severity === sevFilter);
   return h('div', { class: 'view' },
@@ -132,8 +135,8 @@ export function qaView(): HTMLElement {
     h('div', { class: 'kpis' },
       (['error', 'warning', 'info'] as Severity[]).map((s) => h('button', { class: `kpi sev-${s} ${sevFilter === s ? 'on' : ''}`, onclick: () => { sevFilter = sevFilter === s ? '' : s; setUi({}); } }, h('b', {}, String(c[s])), h('span', {}, s === 'error' ? 'Errors' : s === 'warning' ? 'Warnings' : 'Info')))),
     list.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'grid dense' },
-      h('thead', {}, h('tr', {}, ['Door', 'Floor', 'Severity', 'Rule', 'Finding', 'Check performed', 'Source', 'Corrective action'].map((x) => h('th', {}, x)))),
-      h('tbody', {}, list.map((i) => h('tr', { onclick: () => setUi({ view: 'doors', selectedDoorId: i.doorId }) },
+      h('thead', {}, h('tr', {}, ['Door / set', 'Floor', 'Severity', 'Rule', 'Finding', 'Check performed', 'Source', 'Corrective action'].map((x) => h('th', {}, x)))),
+      h('tbody', {}, list.map((i) => h('tr', { onclick: () => setUi(i.doorId ? { view: 'doors', selectedDoorId: i.doorId } : { view: 'hardware' }) },
         h('td', { class: 'mono' }, i.mark), h('td', {}, i.floor), h('td', {}, sevBadge(i.severity)), h('td', { class: 'mono' }, i.ruleId), h('td', {}, i.message), h('td', { class: 'small' }, i.check), h('td', { class: 'small' }, i.source), h('td', { class: 'small' }, i.action)))))) : h('div', { class: 'card empty' }, 'No findings for this filter.'),
   );
 }

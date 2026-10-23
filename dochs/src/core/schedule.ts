@@ -2,7 +2,8 @@ import type { Door, Project } from './types.js';
 import { CONFIG_LABEL, leafCount } from './types.js';
 import { buildingName, classify, floorName, isRated } from './classify.js';
 import { frameFit } from './geometry.js';
-import { counts, validateDoor } from './validate.js';
+import { counts, validateDoor, validateScope } from './validate.js';
+import { takeoff } from './hardware.js';
 
 export type Cell = string | number;
 export interface Table {
@@ -71,54 +72,31 @@ export function quantitySummary(p: Project, doors: Door[]): Table {
   return { name: 'Quantity Summary', columns: ['Floor', 'Configuration', 'Door records', 'Door qty', 'Leaves', 'Fire-rated qty', 'Acoustic qty'], rows };
 }
 
-export interface TakeoffLine {
-  set: string;
-  item: string;
-  manufacturer: string;
-  model: string;
-  finish: string;
-  quantity: number;
-  basis: string;
-  doors: string[];
-}
-
-// Hardware quantities: per-door items x door qty; per-leaf items x door qty x leaves.
-export function hardwareTakeoff(p: Project, doors: Door[]): { lines: TakeoffLine[]; unresolved: string[] } {
-  const lines: TakeoffLine[] = [];
-  const unresolved: string[] = [];
-  const bySet = new Map<string, Door[]>();
-  for (const d of doors) {
-    const k = d.hardwareSet.trim();
-    if (!k) { unresolved.push(`${d.mark}: no hardware set`); continue; }
-    if (!p.hardwareSets.some((h) => h.code === k)) { unresolved.push(`${d.mark}: set ${k} not in library`); continue; }
-    bySet.set(k, [...(bySet.get(k) ?? []), d]);
-  }
-  for (const [code, ds] of bySet) {
-    const set = p.hardwareSets.find((h) => h.code === code)!;
-    for (const it of set.items) {
-      let total = 0;
-      const parts: string[] = [];
-      for (const d of ds) {
-        const leaves = d.configuration ? leafCount(d.configuration) : 1;
-        const q = it.basis === 'per-leaf' ? it.qty * qty(d) * leaves : it.qty * qty(d);
-        total += q;
-        parts.push(it.basis === 'per-leaf' ? `${d.mark}: ${it.qty}x${qty(d)}x${leaves}L` : `${d.mark}: ${it.qty}x${qty(d)}`);
-      }
-      lines.push({ set: code, item: it.item, manufacturer: it.manufacturer, model: it.model, finish: it.finish, quantity: total, basis: `${it.qty} ${it.basis} | ${parts.join(', ')}`, doors: ds.map((d) => d.mark) });
-    }
-  }
-  return { lines, unresolved };
+// Hardware takeoff: see core/hardware.ts for the quantity rules and overrides.
+export function hardwareTakeoff(p: Project, doors: Door[]) {
+  return takeoff(p, doors);
 }
 
 export function hardwareTable(p: Project, doors: Door[]): Table {
-  const { lines, unresolved } = hardwareTakeoff(p, doors);
-  const rows: Cell[][] = lines.map((l) => [l.set, l.item, l.manufacturer, l.model, l.finish, l.quantity, l.basis]);
-  for (const u of unresolved) rows.push(['UNRESOLVED', u, '', '', '', '', '']);
-  return { name: 'Hardware Takeoff', columns: ['Set', 'Item', 'Manufacturer', 'Model', 'Finish', 'Quantity', 'Calculation basis'], rows };
+  const { lines, unresolved } = takeoff(p, doors);
+  const rows: Cell[][] = lines.map((l) => [l.set, l.item, l.category, l.manufacturer, l.model, l.finish, l.verified ? 'Yes' : 'No', l.quantity, l.basis]);
+  for (const u of unresolved) rows.push(['UNRESOLVED', u, '', '', '', '', '', '', '']);
+  return { name: 'Hardware Takeoff', columns: ['Set', 'Item', 'Category', 'Manufacturer', 'Model', 'Finish', 'Verified', 'Quantity', 'Calculation basis'], rows };
+}
+
+export function productTable(p: Project, doors: Door[]): Table {
+  const { products } = takeoff(p, doors);
+  return {
+    name: 'Product Takeoff',
+    columns: ['Category', 'Item', 'Manufacturer', 'Model', 'Finish', 'Verified', 'Quantity', 'Used in sets'],
+    rows: products.map((x) => [x.category, x.item, x.manufacturer, x.model, x.finish, x.verified ? 'Yes' : 'No', x.quantity, x.sets.join(', ')]),
+  };
 }
 
 export function issuesTable(p: Project, doors: Door[]): Table {
-  const rows: Cell[][] = [];
-  for (const d of doors) for (const i of validateDoor(d, p)) rows.push([i.mark, floorName(p, d.floorId), i.severity, i.ruleId, i.message, i.check, i.source, i.action]);
-  return { name: 'QA Issues', columns: ['Door', 'Floor', 'Severity', 'Rule', 'Message', 'Check', 'Source', 'Action'], rows };
+  const rows: Cell[][] = validateScope(p, doors).map((i) => {
+    const d = p.doors.find((x) => x.id === i.doorId);
+    return [i.mark, d ? floorName(p, d.floorId) : 'Hardware set', i.severity, i.ruleId, i.message, i.check, i.source, i.action];
+  });
+  return { name: 'QA Issues', columns: ['Door / set', 'Floor', 'Severity', 'Rule', 'Message', 'Check', 'Source', 'Action'], rows };
 }

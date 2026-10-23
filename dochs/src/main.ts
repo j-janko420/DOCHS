@@ -2,7 +2,8 @@ import { h } from './ui/dom.js';
 import { allProjects, load, project, setUi, subscribe, switchProject, ui } from './ui/state.js';
 import { doorsView } from './ui/views/doors.js';
 import { drawingsView, qaView, scheduleView } from './ui/views/outputs.js';
-import { dashboardView, dataView, hardwareView, projectView } from './ui/views/setup.js';
+import { dashboardView, dataView, projectView } from './ui/views/setup.js';
+import { hardwareView } from './ui/views/hardware.js';
 
 const VIEWS: { key: string; label: string; icon: string; render: () => HTMLElement }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z', render: dashboardView },

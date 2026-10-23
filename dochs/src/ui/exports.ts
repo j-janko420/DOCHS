@@ -1,6 +1,6 @@
 import type { Door, Project } from '../core/types.js';
 import { allClassifications, buildingName, floorName } from '../core/classify.js';
-import { doorSchedule, hardwareTable, issuesTable, quantitySummary } from '../core/schedule.js';
+import { doorSchedule, hardwareTable, issuesTable, productTable, quantitySummary } from '../core/schedule.js';
 import { toCsv, xlsx, zip, type ZipEntry } from '../core/export.js';
 import { drawable } from '../core/validate.js';
 import { exportProject } from '../core/project-ops.js';
@@ -57,7 +57,7 @@ export function setDxf(p: Project, doors: Door[]): { dxf: string; ok: Door[]; bl
 }
 
 export function scheduleTables(p: Project, doors: Door[]) {
-  return [doorSchedule(p, doors), quantitySummary(p, doors), hardwareTable(p, doors), issuesTable(p, doors)];
+  return [doorSchedule(p, doors), quantitySummary(p, doors), hardwareTable(p, doors), productTable(p, doors), issuesTable(p, doors)];
 }
 
 export function exportXlsx(p: Project, doors: Door[]) {
@@ -96,6 +96,7 @@ export function buildPackage(p: Project, doors: Door[]): { bytes: Uint8Array; ok
       '',
       `Doors in scope: ${doors.length}`,
       `Drawings issued (DXF R12, mm, sheet ${ui.sheetSize}): ${ok.length}`,
+      `Unverified hardware products in scope: ${productTable(p, doors).rows.filter((r) => r[5] === 'No').length}`,
       ...ok.map((d) => `  ${d.mark}  ${floorName(p, d.floorId)}  ${d.status}`),
       `Drawings withheld (hard errors): ${blocked.length}`,
       ...blocked.map((b) => `  ${b.d.mark}: ${b.reasons.join('; ')}`),

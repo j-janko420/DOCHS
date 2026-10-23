@@ -118,9 +118,9 @@ test('quantity summary totals door qty and leaves', () => {
 
 test('hardware takeoff uses explicit per-door / per-leaf rules and reports unresolved doors', () => {
   const tk = hardwareTakeoff(P, P.doors);
-  const hinge03 = tk.lines.find((l) => l.set === 'HW-03' && l.item === 'Hinge')!;
+  const hinge03 = tk.lines.find((l) => l.set === 'HW-03' && l.item === 'Butt hinge (generic)')!;
   assert.equal(hinge03.quantity, 3 * 1 * 2 + 3 * 1 * 1); // D-B01 pair + D-R01 single
-  const hinge02 = tk.lines.find((l) => l.set === 'HW-02' && l.item === 'Hinge')!;
+  const hinge02 = tk.lines.find((l) => l.set === 'HW-02' && l.item === 'Butt hinge (generic)')!;
   assert.equal(hinge02.quantity, 6); // qty 2
   assert.match(hinge03.basis, /per-leaf/);
   assert.deepEqual(tk.unresolved, ['D-102: no hardware set']);

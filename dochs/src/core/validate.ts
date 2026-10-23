@@ -2,6 +2,7 @@ import type { Door, Project } from './types.js';
 import { isSliding, isSwing, leafCount } from './types.js';
 import { frameFit, has, parseHinges } from './geometry.js';
 import { isRated } from './classify.js';
+import { setsInScope, validateDoorHardware, validateHardwareSet } from './hardware.js';
 
 export type Severity = 'error' | 'warning' | 'info';
 
@@ -105,6 +106,8 @@ export function validateDoor(d: Door, p: Project): Issue[] {
   }
   if (isRated(d.acousticRating) && !d.threshold.trim()) add('W-AC-01', 'warning', 'threshold', 'Acoustic door without threshold / seal detail', 'threshold is blank', SPEC, 'Specify drop seal or threshold for the acoustic rating');
 
+  out.push(...validateDoorHardware(d, p));
+
   const open = d.comments.filter((x) => !x.resolved).length;
   if (open) add('W-REV-01', 'warning', 'comments', `${open} unresolved review comment(s)`, 'comments not resolved', DATA, 'Resolve or respond to review comments');
   if (d.status === 'approved' && out.some((i) => i.severity === 'error'))
@@ -118,7 +121,12 @@ function num(v: number | null): number {
 }
 
 export function validateProject(p: Project): Issue[] {
-  return p.doors.flatMap((d) => validateDoor(d, p));
+  return [...p.doors.flatMap((d) => validateDoor(d, p)), ...p.hardwareSets.flatMap((hs) => validateHardwareSet(hs, p))];
+}
+
+// Door issues for the given doors plus set-level issues for the sets they use.
+export function validateScope(p: Project, doors: Door[]): Issue[] {
+  return [...doors.flatMap((d) => validateDoor(d, p)), ...setsInScope(p, doors).flatMap((hs) => validateHardwareSet(hs, p))];
 }
 
 export function counts(issues: Issue[]): Record<Severity, number> {

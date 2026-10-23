@@ -49,7 +49,13 @@ export function importProject(text: string): Project {
   const base = blankProject(pr.name ?? 'Imported project');
   const project: Project = { ...base, ...pr, id: pr.id || base.id } as Project;
   project.categories = pr.categories ?? [];
-  project.hardwareSets = pr.hardwareSets ?? [];
+  // v0.1 backups: set items had no id / catalogue link
+  project.hardwareSets = (pr.hardwareSets ?? []).map((s) => ({
+    ...s,
+    items: (s.items ?? []).map((it) => ({ ...it, id: it.id || uid('hwi'), catalogueId: it.catalogueId ?? '' })),
+  }));
+  project.catalogue = pr.catalogue ?? [];
+  project.incompatibilities = pr.incompatibilities ?? [];
   project.revisions = pr.revisions ?? [];
   project.doors = pr.doors.map((d) => blankDoor({ ...(d as Partial<Door>), id: (d as Door).id || uid('door') }));
   return project;

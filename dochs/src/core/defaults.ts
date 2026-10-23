@@ -1,4 +1,4 @@
-import type { Door, Project } from './types.js';
+import type { CatalogueItem, Door, HardwareCategory, HardwareItem, Project } from './types.js';
 
 export function uid(prefix = 'id'): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
@@ -60,6 +60,7 @@ export function blankDoor(partial: Partial<Door> = {}): Door {
     backset: null,
     hingePositions: '',
     pivotOffset: null,
+    hardwareOverrides: [],
     threshold: '',
     floorFinish: '',
     sourceRef: '',
@@ -97,6 +98,8 @@ export function blankProject(name = 'New project'): Project {
     ],
     categories: [],
     hardwareSets: [],
+    catalogue: [],
+    incompatibilities: [],
     revisions: [],
     doors: [],
   };
@@ -193,7 +196,35 @@ export function sampleProject(): Project {
       sourceRef: 'Sample', status: 'for-review', categoryIds: ['cat_ext'],
     }),
   ];
-  const hw = (item: string, qty: number, basis: 'per-door' | 'per-leaf') => ({ item, qty, basis, manufacturer: '', model: '', finish: '' });
+  // Generic, unverified catalogue entries: placeholders for manufacturer products.
+  const cat = (id: string, category: HardwareCategory, description: string, powered = false): CatalogueItem => ({
+    id, category, manufacturer: '', model: '', description, finish: '', dimensions: '', mounting: '', fireRated: '', powered, sourceRef: '', verified: false, notes: '',
+  });
+  const catalogue: CatalogueItem[] = [
+    cat('cat_hinge', 'hinge', 'Butt hinge (generic)'),
+    cat('cat_passage', 'lock', 'Passage latch set (generic)'),
+    cat('cat_lockset', 'lock', 'Mortice lockset (generic)'),
+    cat('cat_elock', 'lock', 'Electric lock (generic)', true),
+    cat('cat_closer', 'closer', 'Overhead closer (generic)'),
+    cat('cat_stop', 'stop', 'Door stop (generic)'),
+    cat('cat_dropseal', 'seal', 'Automatic drop seal (generic)'),
+    cat('cat_acseal', 'seal', 'Perimeter acoustic seal (generic)'),
+    cat('cat_smokeseal', 'seal', 'Smoke seal (generic)'),
+    cat('cat_selector', 'coordinator', 'Door selector / coordinator (generic)'),
+    cat('cat_reader', 'access-control', 'Card reader (generic)', true),
+    cat('cat_contact', 'access-control', 'Door position contact (generic)', true),
+    cat('cat_flushbolt', 'flush-bolt', 'Flush bolt (generic)'),
+    cat('cat_track', 'sliding-gear', 'Sliding track (generic)'),
+    cat('cat_flushpull', 'pull', 'Flush pull (generic)'),
+    cat('cat_hooklock', 'lock', 'Hook lock (generic)'),
+    cat('cat_floorpivot', 'pivot', 'Floor pivot (generic)'),
+    cat('cat_toppivot', 'pivot', 'Top pivot (generic)'),
+    cat('cat_pull', 'pull', 'Pull handle (generic)'),
+  ];
+  let n = 0;
+  const hw = (catalogueId: string, qty: number, basis: 'per-door' | 'per-leaf'): HardwareItem => ({
+    id: `hwi_${++n}`, catalogueId, item: catalogue.find((c) => c.id === catalogueId)!.description, qty, basis, manufacturer: '', model: '', finish: '',
+  });
   return {
     id: 'prj_sample',
     name: 'Sample Office Building',
@@ -222,13 +253,15 @@ export function sampleProject(): Project {
       { id: 'cat_mep', name: 'MEP / plant' },
     ],
     hardwareSets: [
-      { code: 'HW-01', description: 'Office, latch + lever', items: [hw('Hinge', 3, 'per-leaf'), hw('Passage set', 1, 'per-door'), hw('Door stop', 1, 'per-door')] },
-      { code: 'HW-02', description: 'Meeting, acoustic', items: [hw('Hinge', 3, 'per-leaf'), hw('Lockset', 1, 'per-door'), hw('Overhead closer', 1, 'per-door'), hw('Drop seal', 1, 'per-leaf'), hw('Perimeter acoustic seal', 1, 'per-door')] },
-      { code: 'HW-03', description: 'Fire door, closer', items: [hw('Hinge', 3, 'per-leaf'), hw('Lockset', 1, 'per-door'), hw('Overhead closer', 1, 'per-leaf'), hw('Smoke seal', 1, 'per-door'), hw('Door selector', 1, 'per-door')] },
-      { code: 'HW-04', description: 'Entrance, access controlled', items: [hw('Hinge', 3, 'per-leaf'), hw('Electric lock', 1, 'per-door'), hw('Card reader', 1, 'per-door'), hw('Door contact', 1, 'per-door'), hw('Flush bolt', 2, 'per-door')] },
-      { code: 'HW-05', description: 'Sliding store', items: [hw('Sliding track', 1, 'per-door'), hw('Flush pull', 2, 'per-leaf'), hw('Hook lock', 1, 'per-door')] },
-      { code: 'HW-06', description: 'Pivot', items: [hw('Floor pivot', 1, 'per-leaf'), hw('Top pivot', 1, 'per-leaf'), hw('Pull handle', 1, 'per-door')] },
+      { code: 'HW-01', description: 'Office, latch + lever', items: [hw('cat_hinge', 3, 'per-leaf'), hw('cat_passage', 1, 'per-door'), hw('cat_stop', 1, 'per-door')] },
+      { code: 'HW-02', description: 'Meeting, acoustic', items: [hw('cat_hinge', 3, 'per-leaf'), hw('cat_lockset', 1, 'per-door'), hw('cat_closer', 1, 'per-door'), hw('cat_dropseal', 1, 'per-leaf'), hw('cat_acseal', 1, 'per-door')] },
+      { code: 'HW-03', description: 'Fire door, closer', items: [hw('cat_hinge', 3, 'per-leaf'), hw('cat_lockset', 1, 'per-door'), hw('cat_closer', 1, 'per-leaf'), hw('cat_smokeseal', 1, 'per-door'), hw('cat_selector', 1, 'per-door')] },
+      { code: 'HW-04', description: 'Entrance, access controlled', items: [hw('cat_hinge', 3, 'per-leaf'), hw('cat_elock', 1, 'per-door'), hw('cat_reader', 1, 'per-door'), hw('cat_contact', 1, 'per-door'), hw('cat_flushbolt', 2, 'per-door')] },
+      { code: 'HW-05', description: 'Sliding store', items: [hw('cat_track', 1, 'per-door'), hw('cat_flushpull', 2, 'per-leaf'), hw('cat_hooklock', 1, 'per-door')] },
+      { code: 'HW-06', description: 'Pivot', items: [hw('cat_floorpivot', 1, 'per-leaf'), hw('cat_toppivot', 1, 'per-leaf'), hw('cat_pull', 1, 'per-door')] },
     ],
+    catalogue,
+    incompatibilities: [],
     revisions: [{ rev: 'P01', date: new Date().toISOString().slice(0, 10), description: 'Sample data issue', by: 'DOCHS' }],
     doors,
   };

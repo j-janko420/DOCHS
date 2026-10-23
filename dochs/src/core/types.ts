@@ -93,6 +93,7 @@ export interface Door {
   backset: number | null;
   hingePositions: string; // comma list, mm from bottom of leaf to hinge centre
   pivotOffset: number | null;
+  hardwareOverrides: HardwareOverride[];
   // installation
   threshold: string;
   floorFinish: string;
@@ -124,13 +125,62 @@ export interface Category {
   name: string;
 }
 
+export type HardwareCategory =
+  | 'hinge' | 'pivot' | 'lock' | 'cylinder' | 'handle' | 'pull' | 'closer' | 'panic' | 'flush-bolt' | 'coordinator'
+  | 'seal' | 'threshold' | 'stop' | 'protection' | 'access-control' | 'electrical' | 'sliding-gear' | 'other';
+
+export const HARDWARE_CATEGORIES: Record<HardwareCategory, string> = {
+  hinge: 'Hinge', pivot: 'Pivot', lock: 'Lock / latch', cylinder: 'Cylinder', handle: 'Lever / handle', pull: 'Pull / push plate',
+  closer: 'Closer', panic: 'Panic / exit device', 'flush-bolt': 'Flush bolt', coordinator: 'Coordinator', seal: 'Seal',
+  threshold: 'Threshold', stop: 'Stop / holder', protection: 'Kick / protection plate', 'access-control': 'Access control',
+  electrical: 'Electrical / power', 'sliding-gear': 'Sliding gear', other: 'Other',
+};
+
+// A catalogue product. Values are entered from manufacturer sources; DOCHS never
+// fills them in. `verified` records that someone checked them against `sourceRef`.
+export interface CatalogueItem {
+  id: string;
+  category: HardwareCategory;
+  manufacturer: string;
+  model: string;
+  description: string;
+  finish: string;
+  dimensions: string;
+  mounting: string;
+  fireRated: '' | 'yes' | 'no'; // as stated by the source; '' = not stated
+  powered: boolean; // needs power / electrical coordination
+  sourceRef: string;
+  verified: boolean;
+  notes: string;
+}
+
+// Explicit incompatibility between two catalogue items, entered from a source.
+export interface IncompatibilityRule {
+  id: string;
+  a: string;
+  b: string;
+  reason: string;
+  source: string;
+}
+
 export interface HardwareItem {
+  id: string;
+  catalogueId: string; // '' = free-text item not linked to the catalogue
   item: string;
   qty: number;
   basis: 'per-door' | 'per-leaf';
   manufacturer: string;
   model: string;
   finish: string;
+}
+
+// Door-level quantity override for one set item, with the reason recorded.
+export interface HardwareOverride {
+  itemId: string;
+  qty: number; // total for this door record (all leaves, all quantity)
+  reason: string;
+  by: string;
+  at: string;
 }
 
 export interface HardwareSet {
@@ -165,6 +215,8 @@ export interface Project {
   floors: Floor[];
   categories: Category[];
   hardwareSets: HardwareSet[];
+  catalogue: CatalogueItem[];
+  incompatibilities: IncompatibilityRule[];
   revisions: Revision[];
   doors: Door[];
 }
