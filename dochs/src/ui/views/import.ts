@@ -6,6 +6,7 @@ import { floorName } from '../../core/classify.js';
 import { download, h, safeName, toast } from '../dom.js';
 import { project, setProject, setUi } from '../state.js';
 import { aiServer, suggestMapping } from '../ai.js';
+import { downloadSampleCsv } from './about.js';
 
 let aiBusy = false;
 let aiNotes: string[] = [];
@@ -81,7 +82,7 @@ export function importView(): HTMLElement {
   const file = h('input', { type: 'file', accept: '.xlsx,.csv', class: 'hidden', onchange: (e: Event) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) void load(f); } }) as HTMLInputElement;
   const head = h('div', { class: 'view-head' },
     h('div', {}, h('h1', {}, 'Import door schedule'), h('p', { class: 'muted' }, 'Upload an Excel (.xlsx) or CSV door schedule. Columns are matched automatically; check them, preview, then import. The file is read in your browser and is not uploaded anywhere.')),
-    h('div', { class: 'row gap' }, h('button', { class: 'btn primary', onclick: () => file.click() }, st ? 'Choose another file' : 'Choose file'), file));
+    h('div', { class: 'row gap' }, h('button', { class: 'btn', title: 'A small imperial door schedule to try the import with', onclick: downloadSampleCsv }, 'Download sample CSV'), h('button', { class: 'btn primary', onclick: () => file.click() }, st ? 'Choose another file' : 'Choose file'), file));
   if (!st) {
     return h('div', { class: 'view' }, head,
       h('div', { class: 'card empty dropzone', ondragover: (e: DragEvent) => e.preventDefault(), ondrop: (e: DragEvent) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) void load(f); } },

@@ -5,7 +5,7 @@ import { blankProject } from '../src/core/defaults.js';
 import { crc32 } from '../src/core/export.js';
 import { readXlsx } from '../src/core/xlsx-read.js';
 import { autoMapping, csvRows, findHeaderRow, importRows, parseAcoustic, parseConfiguration, parseFire, parseLength } from '../src/core/importer.js';
-import { SAMPLES, sampleHospitality, sampleSchoolImport } from '../src/core/samples.js';
+import { SAMPLES, SCHOOL_CSV, sampleHospitality, sampleSchoolImport } from '../src/core/samples.js';
 import { validateDoor, validateProject } from '../src/core/validate.js';
 import { buildScene } from '../src/ui/viewer3d.js';
 
@@ -165,4 +165,22 @@ test('AI suggestions merge into the current matching without dropping good match
   // a field moved by the AI is cleared from its old column
   assert.deepEqual(mergeMapping(['mark', 'doorType', ''], ['', '', 'mark']), ['', 'doorType', 'mark']);
   assert.deepEqual(mergeMapping(['remarks', ''], ['', 'remarks']), ['remarks', 'remarks']);
+});
+
+test('guided test: report covers every scenario and the documented expectations hold', async () => {
+  const { SCENARIOS, feedbackReport, VERSION } = await import('../src/ui/views/about.js');
+  const r = feedbackReport({ tester: 'QA', results: { dash: { status: 'pass', note: '' }, filter: { status: 'fail', note: 'only 2 rows' } }, general: 'ok' });
+  assert.ok(r.includes(VERSION) && r.includes('Tested: 2 of') && r.includes('only 2 rows'));
+  assert.equal(r.split('\n').filter((l) => /^\d+\. /.test(l)).length, SCENARIOS.length);
+  // scenario 1 and 2 expectations
+  const { filterDoors } = await import('../src/core/classify.js');
+  const p = sampleHospitality();
+  const l31 = p.floors.find((f) => f.name === 'Level 31')!, l32 = p.floors.find((f) => f.name === 'Level 32')!;
+  assert.equal(p.doors.filter((d) => d.floorId === l31.id).length, 2);
+  assert.equal(p.doors.filter((d) => d.floorId === l32.id).length, 10);
+  assert.deepEqual(filterDoors(p, { floorId: l32.id, categoryKeys: ['feature:fire-rated'] }).map((d) => d.mark), ['L32-201', 'L32-301', 'L32-303']);
+  // scenario 7: the sample CSV has 8 data rows, 7 doors and a TOTAL row
+  const rows = csvRows(SCHOOL_CSV);
+  const r7 = importRows(p, rows, { fileName: 's.csv', sheetName: 's', headerRow: 0, mapping: autoMapping(rows[0]), units: 'auto', buildingId: p.buildings[0].id, defaultFloorId: l31.id, existing: 'skip' });
+  assert.deepEqual([r7.report.dataRows, r7.report.imported, r7.report.skipped.length], [8, 7, 1]);
 });

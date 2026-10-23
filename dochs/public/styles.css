@@ -272,3 +272,13 @@ input.need { border-color: var(--err); }
 .v3d-open { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
 .v3d-canvas { width: 100%; display: block; background: linear-gradient(#f4f6f8, #dfe4e9); border: 1px solid var(--line); border-radius: 8px; cursor: grab; touch-action: none; }
 .v3d-canvas:active { cursor: grabbing; }
+
+/* demo 1.0: welcome and guided test */
+.welcome { background: var(--panel); color: var(--ink); border-radius: 12px; padding: 24px 26px; max-width: 520px; margin: auto; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35); }
+.welcome h2 { margin: 0; font-size: 22px; }
+ol.scenarios { margin: 8px 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; }
+.scenario { border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; background: var(--panel-2); }
+.scenario.st-pass { border-left-color: var(--ok); }
+.scenario.st-issue { border-left-color: var(--warn); }
+.scenario.st-fail { border-left-color: var(--err); }
+.scenario p { margin: 0; }

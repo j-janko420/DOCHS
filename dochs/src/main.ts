@@ -1,6 +1,7 @@
 import { h } from './ui/dom.js';
 import { allProjects, isDemo, load, project, setUi, subscribe, switchProject, ui } from './ui/state.js';
 import { importView } from './ui/views/import.js';
+import { VERSION, aboutView, welcome } from './ui/views/about.js';
 import { doorsView } from './ui/views/doors.js';
 import { drawingsView, qaView, scheduleView } from './ui/views/outputs.js';
 import { dashboardView, dataView, projectView } from './ui/views/setup.js';
@@ -21,6 +22,7 @@ const VIEWS: { key: string; label: string; icon: string; render: () => HTMLEleme
   { key: 'hardware', label: 'Hardware', icon: 'M14 7a4 4 0 1 0-4 4l-6 6 3 3 6-6a4 4 0 0 0 1-7z', render: hardwareView },
   { key: 'materials', label: 'Materials', icon: 'M4 7l8-4 8 4-8 4zM4 12l8 4 8-4M4 17l8 4 8-4', render: materialsView },
   { key: 'qa', label: 'QA checks', icon: 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z M9 12l2 2 4-4', render: qaView },
+  { key: 'about', label: 'About & test guide', icon: 'M12 8h.01M11 12h1v5h1M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', render: aboutView },
   { key: 'data', label: 'Project data', icon: 'M4 6c0-2 16-2 16 0v12c0 2-16 2-16 0zM4 6c0 2 16 2 16 0M4 12c0 2 16 2 16 0', render: dataView },
 ];
 
@@ -59,7 +61,7 @@ function shell(): HTMLElement {
         h('select', { id: 'proj-select', onchange: (e: Event) => switchProject((e.target as HTMLSelectElement).value) }, allProjects().map((x) => h('option', { value: x.id, selected: x.id === p.id }, x.name)))),
       h('button', { class: 'btn primary design-btn', onclick: () => openDesigner() }, '+ Design your door'),
       h('nav', { 'aria-label': 'Main' }, VIEWS.map((v) => h('a', { href: `#/${v.key}`, class: v.key === current.key ? 'on' : '', 'aria-current': v.key === current.key ? 'page' : undefined }, icon(v.icon), h('span', {}, v.label)))),
-      h('div', { class: 'side-foot' }, 'Design - Draw - Detail - Schedule - Deliver', h('br'), h('span', {}, 'Test version 0.2'), h('br'), h('span', { class: 'credit' }, 'Designed by i3 Design')),
+      h('div', { class: 'side-foot' }, 'Design - Draw - Detail - Schedule - Deliver', h('br'), h('span', {}, `Version ${VERSION}`), h('br'), h('span', { class: 'credit' }, 'Designed by i3 Design')),
     ),
     h('main', { id: 'main' },
       isDemo() ? h('div', { class: 'demo-bar' }, h('b', {}, 'Demo mode. '), 'Sample projects only: try anything, nothing is saved and your own projects are not touched. ',
@@ -104,3 +106,5 @@ subscribe(() => {
 window.addEventListener('hashchange', route);
 route();
 render();
+const w = welcome();
+if (w) document.body.append(w);

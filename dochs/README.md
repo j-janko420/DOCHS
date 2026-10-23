@@ -1,6 +1,6 @@
 # DOCHS - DoorChisolution
 
-**Test version 0.2 - Designed by i3 Design.**
+**Version 1.0.0-demo - Designed by i3 Design.** Try it: https://j-janko420.github.io/DOCHS/?demo. Release notes: [CHANGELOG](../CHANGELOG.md).
 
 DOCHS turns a door register into floor-wise and category-wise door schedules and editable 2D CAD door drawings (DXF). It is a static web app with no runtime dependencies.
 
@@ -133,7 +133,7 @@ See `server/README.md`. The web app works fully without it, and demo mode never 
 ```bash
 cd dochs
 npm install          # TypeScript only
-npm test             # 61 tests: geometry, QA rules, schedules, DXF structure, ZIP/XLSX
+npm test             # 62 tests: geometry, QA rules, schedules, DXF structure, ZIP/XLSX
 npm run build        # -> dist/ (static site)
 npm start            # http://localhost:5173
 ```
