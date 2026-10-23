@@ -194,7 +194,7 @@ export function parseCsv(text: string): string[][] {
       if (ch === '"' && t[i + 1] === '"') { cell += '"'; i++; }
       else if (ch === '"') q = false;
       else cell += ch;
-    } else if (ch === '"') q = true;
+    } else if (ch === '"' && cell === '') q = true; // a quote is special only at the start of a field
     else if (ch === ',') { row.push(cell); cell = ''; }
     else if (ch === '\n' || ch === '\r') {
       if (ch === '\r' && t[i + 1] === '\n') i++;

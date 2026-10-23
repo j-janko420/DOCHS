@@ -89,7 +89,7 @@ export function buildPackage(p: Project, doors: Door[]): { bytes: Uint8Array; ok
   entries.push({
     name: `${root}/MANIFEST.txt`,
     data: [
-      'DOCHS - DoorChisolution issue package',
+      'DOCHS - DoorChisolution issue package (Designed by i3 Design)',
       `Project: ${p.name} ${p.number}`.trim(),
       `Revision: ${p.revision}   Date: ${p.date}   Status: ${p.status}`,
       `Scope: ${scope}`,

@@ -9,6 +9,9 @@ import { filterBar, filteredDoors } from '../filters.js';
 import { project, setUi, ui } from '../state.js';
 import { exportCsv, exportDoorDxf, exportPackage, exportXlsx, printSheet, scheduleTables, scopeLabel, setDxf, sheetFor } from '../exports.js';
 import { download, safeName, toast } from '../dom.js';
+import { viewer3d } from '../viewer3d.js';
+
+let mode3d = false;
 
 let tab = 0;
 
@@ -107,7 +110,10 @@ export function drawingsView(): HTMLElement {
         ),
         gate.ok ? null : h('div', { class: 'alert err' }, h('b', {}, `${d.mark}: DXF export blocked by ${gate.errors.length} error(s). `), gate.errors.map((e) => `${e.ruleId} ${e.message}`).join('; ')),
         d.status !== 'approved' && gate.ok ? h('div', { class: 'alert info' }, `Status is ${d.status}: the sheet carries a NOT FOR CONSTRUCTION banner until the door is approved.`) : null,
-        host,
+        h('div', { class: 'tabs', role: 'tablist' },
+          h('button', { role: 'tab', class: `tab ${mode3d ? '' : 'on'}`, 'aria-selected': mode3d ? 'false' : 'true', onclick: () => { mode3d = false; setUi({}); } }, '2D drawing sheet'),
+          h('button', { role: 'tab', class: `tab ${mode3d ? 'on' : ''}`, 'aria-selected': mode3d ? 'true' : 'false', onclick: () => { mode3d = true; setUi({}); } }, '3D model')),
+        mode3d ? viewer3d(d, 'studio', 560) : host,
         h('div', { class: 'layers' }, h('span', { class: 'muted small' }, 'Layers:'), LAYERS.map((l) => h('label', { class: 'layer' },
           h('input', { type: 'checkbox', checked: !ui.hiddenLayers.includes(l.name), onchange: (e: Event) => setUi({ hiddenLayers: (e.target as HTMLInputElement).checked ? ui.hiddenLayers.filter((x) => x !== l.name) : [...ui.hiddenLayers, l.name] }) }),
           h('i', { style: { background: l.svg } }), l.name))),

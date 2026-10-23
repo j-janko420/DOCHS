@@ -1,5 +1,6 @@
 import type { Project } from '../core/types.js';
 import { sampleProject } from '../core/defaults.js';
+import { SAMPLES } from '../core/samples.js';
 import type { DoorFilter } from '../core/classify.js';
 import type { SheetSize } from '../cad/sheet.js';
 
@@ -23,10 +24,24 @@ interface Persisted {
 let projects: Project[] = [];
 let currentId = '';
 let storageOk = true;
+let demo = false;
 export const ui: UiState = { view: 'dashboard', filter: {}, selectedDoorId: '', sheetSize: 'A3', mainScale: 0, hiddenLayers: [] };
 const listeners = new Set<() => void>();
 
+// Demo mode (?demo in the URL): sample projects only, nothing read from or
+// written to this browser's storage, so a shared link never touches real work.
+export function isDemo(): boolean {
+  return demo;
+}
+
 export function load() {
+  demo = /[?&]demo\b/.test(location.search);
+  if (demo) {
+    projects = SAMPLES.map((s) => s.build());
+    const want = /[?&]demo=([a-z]+)/.exec(location.search)?.[1];
+    currentId = projects[Math.max(0, SAMPLES.findIndex((s) => s.key === want))].id;
+    return;
+  }
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
@@ -47,6 +62,7 @@ export function storageAvailable(): boolean {
 }
 
 function persist() {
+  if (demo) return;
   try {
     localStorage.setItem(KEY, JSON.stringify({ projects, currentId, ui: { filter: ui.filter, selectedDoorId: ui.selectedDoorId, sheetSize: ui.sheetSize, mainScale: ui.mainScale, hiddenLayers: ui.hiddenLayers } }));
     storageOk = true;

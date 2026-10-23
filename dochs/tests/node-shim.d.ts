@@ -23,3 +23,6 @@ declare module 'node:fs' {
 declare module 'node:child_process' {
   export function execFileSync(cmd: string, args: string[], o?: { encoding?: string }): string;
 }
+declare module 'node:zlib' {
+  export function deflateRawSync(data: Uint8Array): Uint8Array;
+}

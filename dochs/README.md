@@ -1,5 +1,7 @@
 # DOCHS - DoorChisolution
 
+**Test version 0.2 - Designed by i3 Design.**
+
 DOCHS turns a door register into floor-wise and category-wise door schedules and editable 2D CAD door drawings (DXF). It is a static web app with no runtime dependencies.
 
 **Release 0.1 scope (Milestone 1).** The full workflow runs end to end: select a floor, classify the doors, generate the door schedule, create the matching 2D DXF drawings, then export both.
@@ -15,6 +17,24 @@ DOCHS turns a door register into floor-wise and category-wise door schedules and
    - outside and inside elevations, a plan with swing, and head, jamb and threshold sections
    - dimensions, a title block and notes
 7. **Issue:** a ZIP package containing `schedule.xlsx` (4 sheets), CSVs, one DXF per door, one set DXF for the scope, `MANIFEST.txt` and a JSON backup.
+
+## Test version: demo, import, 3D
+
+- **Shareable demo:** open the site with `?demo` (e.g. `https://j-janko420.github.io/DOCHS/?demo`).
+  - It loads three sample projects: office, anonymised hospitality level, and an imperial school wing built by import.
+  - Nothing is saved, and the demo never reads or writes the projects stored in that browser.
+  - Add `?demo=hospitality` or `?demo=school` to open a specific sample.
+- **Import schedule:** upload an `.xlsx` or `.csv`.
+  - Columns are matched by header (door number, type, qty, level, location / from-to, single/double/sliding, number of leaves, description, fire, acoustic, sizes, materials, finish, hardware set, drawing ref, remarks). You can change the matching.
+  - Sizes in mm, inches or feet-inches are converted. Fire ratings like "1 HR" and "FR 60 min" and acoustic ratings like "40DB" are normalised.
+  - A preview runs before anything is imported.
+  - The report reconciles exactly: imported + updated + skipped (with reason) = data rows, so no row is lost silently.
+  - Missing data is flagged in QA, never filled in.
+  - The file is read in the browser and not uploaded.
+- **3D model:** in the 2D CAD studio and the Door Designer.
+  - Built from the same door record as the drawings.
+  - Rotate and zoom, outside / inside / top views, open the leaf (swing, pivot, sliding), exploded view.
+  - It is a visual model, not fabrication geometry.
 
 ## Door library and Door Designer
 
@@ -104,7 +124,7 @@ DOCHS turns a door register into floor-wise and category-wise door schedules and
 ```bash
 cd dochs
 npm install          # TypeScript only
-npm test             # 54 tests: geometry, QA rules, schedules, DXF structure, ZIP/XLSX
+npm test             # 59 tests: geometry, QA rules, schedules, DXF structure, ZIP/XLSX
 npm run build        # -> dist/ (static site)
 npm start            # http://localhost:5173
 ```
@@ -122,9 +142,8 @@ Data is stored in the browser (localStorage) per device. Use **Project data > Ex
 
 | Item | Status |
 |---|---|
-| 3D door viewer (Three.js) | Phase 5 |
 | Team database, login, roles (Supabase/PostgreSQL) | Phase 6 |
-| OCR / drawing extraction | Not configured. Shown as unavailable in the app, never simulated |
+| OCR / PDF drawing extraction | Not configured. Spreadsheet import (xlsx/csv) is available; PDF and image extraction need a server-side service and are never simulated |
 | DWG import/export | Needs a licensed engine |
 
 ## Acceptance test before production use
@@ -147,3 +166,7 @@ Data is stored in the browser (localStorage) per device. Use **Project data > Ex
 | `src/cad/` | Parametric views, sheet composer and title block, DXF R12 writer, SVG preview |
 | `src/ui/` | Browser UI: vanilla TypeScript, no framework |
 | `tests/` | `node:test` suite on the compiled output |
+
+## Credits
+
+DOCHS - DoorChisolution. Designed by **i3 Design**.

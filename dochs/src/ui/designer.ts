@@ -5,6 +5,7 @@ import { addDesignedDoor, applyStyle, defaultDesign, designDoor, hardwareLines, 
 import { composeSheet } from '../cad/sheet.js';
 import { toSvg } from '../cad/svg.js';
 import { h, toast } from './dom.js';
+import { viewer3d } from './viewer3d.js';
 import { project, setProject, setUi } from './state.js';
 
 // "Design your door": a pop-up configurator. State lives here so it survives
@@ -148,7 +149,7 @@ export function designerPanel(rerender: () => void, onDone: () => void): HTMLEle
       h('button', { type: 'button', class: 'btn', onclick: () => { input = defaultDesign(); rerender(); } }, 'Start again')));
   return h('div', { class: 'dz' },
     options,
-    h('div', { class: 'dz-preview' }, h('h3', {}, 'Live drawing'), preview, summary, h('h3', {}, 'Add to project'), addForm));
+    h('div', { class: 'dz-preview' }, h('h3', {}, 'Live drawing'), preview, r.errors.length ? null : h('h3', {}, '3D model'), r.errors.length ? null : viewer3d({ ...r.door, mark: add.mark || 'NEW' }, 'designer', 340), summary, h('h3', {}, 'Add to project'), addForm));
 }
 
 // ---------- pop-up ----------

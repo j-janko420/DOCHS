@@ -1,5 +1,6 @@
 import { h } from './ui/dom.js';
-import { allProjects, load, project, setUi, subscribe, switchProject, ui } from './ui/state.js';
+import { allProjects, isDemo, load, project, setUi, subscribe, switchProject, ui } from './ui/state.js';
+import { importView } from './ui/views/import.js';
 import { doorsView } from './ui/views/doors.js';
 import { drawingsView, qaView, scheduleView } from './ui/views/outputs.js';
 import { dashboardView, dataView, projectView } from './ui/views/setup.js';
@@ -13,6 +14,7 @@ const VIEWS: { key: string; label: string; icon: string; render: () => HTMLEleme
   { key: 'designer', label: 'Design your door', icon: 'M5 21V4h11v17M16 4l3 2v13l-3 2M12 12h1', render: designerView },
   { key: 'reference', label: 'Door library', icon: 'M4 5h6v15H4zM10 5h4v15h-4zM15 6l4 1-3 13-4-1z', render: referenceView },
   { key: 'project', label: 'Project setup', icon: 'M4 21V8l8-5 8 5v13M9 21v-6h6v6', render: projectView },
+  { key: 'import', label: 'Import schedule', icon: 'M12 3v12M7 10l5 5 5-5M4 19h16', render: importView },
   { key: 'doors', label: 'Door register', icon: 'M6 21V3h12v18M14 12h1M3 21h18', render: doorsView },
   { key: 'schedule', label: 'Schedules', icon: 'M3 5h18M3 10h18M3 15h18M3 20h18M9 5v15', render: scheduleView },
   { key: 'drawings', label: '2D CAD studio', icon: 'M4 20h16M4 20V4m0 16L20 4M8 8h3M8 12h6', render: drawingsView },
@@ -57,9 +59,12 @@ function shell(): HTMLElement {
         h('select', { id: 'proj-select', onchange: (e: Event) => switchProject((e.target as HTMLSelectElement).value) }, allProjects().map((x) => h('option', { value: x.id, selected: x.id === p.id }, x.name)))),
       h('button', { class: 'btn primary design-btn', onclick: () => openDesigner() }, '+ Design your door'),
       h('nav', { 'aria-label': 'Main' }, VIEWS.map((v) => h('a', { href: `#/${v.key}`, class: v.key === current.key ? 'on' : '', 'aria-current': v.key === current.key ? 'page' : undefined }, icon(v.icon), h('span', {}, v.label)))),
-      h('div', { class: 'side-foot' }, 'Design - Draw - Detail - Schedule - Deliver', h('br'), h('span', {}, 'v0.1 - DXF R12 engine')),
+      h('div', { class: 'side-foot' }, 'Design - Draw - Detail - Schedule - Deliver', h('br'), h('span', {}, 'Test version 0.2'), h('br'), h('span', { class: 'credit' }, 'Designed by i3 Design')),
     ),
-    h('main', { id: 'main' }, main),
+    h('main', { id: 'main' },
+      isDemo() ? h('div', { class: 'demo-bar' }, h('b', {}, 'Demo mode. '), 'Sample projects only: try anything, nothing is saved and your own projects are not touched. ',
+        h('a', { href: location.pathname }, 'Open my own workspace')) : null,
+      main),
   );
 }
 

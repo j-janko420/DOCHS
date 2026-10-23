@@ -1,6 +1,7 @@
 import type { Project } from '../../core/types.js';
 import { leafCount } from '../../core/types.js';
-import { blankProject, sampleProject, uid } from '../../core/defaults.js';
+import { blankProject, uid } from '../../core/defaults.js';
+import { SAMPLES } from '../../core/samples.js';
 import { floorName, isRated } from '../../core/classify.js';
 import { counts, validateDoor, validateScope } from '../../core/validate.js';
 import { hardwareTakeoff } from '../../core/schedule.js';
@@ -151,7 +152,12 @@ export function dataView(): HTMLElement {
             confirmButton('Delete', 'btn ghost sm', () => deleteProject(x.id), 'Confirm delete')))))),
         h('div', { class: 'row gap' },
           h('button', { class: 'btn primary', onclick: () => { addProject(blankProject('New project')); setUi({ view: 'project' }); toast('New project created: set its name in Project setup', 'ok'); } }, '+ New blank project'),
-          h('button', { class: 'btn', onclick: () => addProject(sampleProject()) }, 'Load sample project'))),
+          h('select', { id: 'sample-pick', 'aria-label': 'Load a sample project', onchange: (e: Event) => { const s = SAMPLES.find((x) => x.key === (e.target as HTMLSelectElement).value); if (s) { addProject(s.build()); toast(`Loaded ${s.name}`, 'ok'); } } },
+            h('option', { value: '' }, 'Load a sample project...'), SAMPLES.map((s) => h('option', { value: s.key, title: s.description }, s.name))))),
+      h('section', { class: 'card' }, h('h3', {}, 'Share a demo'),
+        h('p', {}, 'Send this link to let anyone try DOCHS with the sample projects. Demo mode saves nothing and cannot see projects stored in your browser.'),
+        h('div', { class: 'row gap' }, h('input', { id: 'demo-link', type: 'text', readonly: true, value: `${location.origin}${location.pathname}?demo`, class: 'grow' }),
+          h('button', { class: 'btn', onclick: async () => { const v = `${location.origin}${location.pathname}?demo`; try { await navigator.clipboard.writeText(v); toast('Demo link copied', 'ok'); } catch { (document.getElementById('demo-link') as HTMLInputElement | null)?.select(); toast('Select the link and copy it', 'info'); } } }, 'Copy link'))),
       h('section', { class: 'card' }, h('h3', {}, 'Backup and restore'),
         h('p', {}, h('button', { class: 'btn', onclick: () => download(`${safeName(p.name)}_backup_${new Date().toISOString().slice(0, 10)}.json`, exportProject(p), 'application/json') }, 'Export JSON backup (current project)')),
         h('p', {}, h('button', { class: 'btn', onclick: () => file.click() }, 'Import JSON backup'), file),
