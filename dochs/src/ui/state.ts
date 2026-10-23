@@ -30,12 +30,17 @@ const listeners = new Set<() => void>();
 
 // Demo mode (?demo in the URL): sample projects only, nothing read from or
 // written to this browser's storage, so a shared link never touches real work.
+export function demoOnly(): boolean {
+  return (globalThis as { DOCHS_DEMO?: boolean }).DOCHS_DEMO === true;
+}
+
 export function isDemo(): boolean {
   return demo;
 }
 
 export function load() {
-  demo = /[?&]demo\b/.test(location.search);
+  // ?demo in the URL, or a host page that sets window.DOCHS_DEMO (hosts that drop the query string)
+  demo = /[?&]demo\b/.test(location.search) || demoOnly();
   if (demo) {
     projects = SAMPLES.map((s) => s.build());
     const want = /[?&]demo=([a-z]+)/.exec(location.search)?.[1];

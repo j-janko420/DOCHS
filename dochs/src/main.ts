@@ -1,5 +1,5 @@
 import { h } from './ui/dom.js';
-import { allProjects, isDemo, load, project, setUi, subscribe, switchProject, ui } from './ui/state.js';
+import { allProjects, demoOnly, isDemo, load, project, setUi, subscribe, switchProject, ui } from './ui/state.js';
 import { importView } from './ui/views/import.js';
 import { VERSION, aboutView, welcome } from './ui/views/about.js';
 import { doorsView } from './ui/views/doors.js';
@@ -65,7 +65,7 @@ function shell(): HTMLElement {
     ),
     h('main', { id: 'main' },
       isDemo() ? h('div', { class: 'demo-bar' }, h('b', {}, 'Demo mode. '), 'Sample projects only: try anything, nothing is saved and your own projects are not touched. ',
-        h('a', { href: location.pathname }, 'Open my own workspace')) : null,
+        demoOnly() ? null : h('a', { href: location.pathname }, 'Open my own workspace')) : null,
       main),
   );
 }
