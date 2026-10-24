@@ -48,6 +48,12 @@ function entity(w: W, e: Entity, layerOverride?: string) {
       if (h || v) { w.g(72, h); w.g(73, v); w.pt(e.p, 11); }
       break;
     }
+    case 'image': {
+      // R12 has no raster entity: the image area is kept as a frame on its layer
+      const [x, y] = e.p;
+      entity(w, { t: 'poly', layer: e.layer, closed: true, pts: [[x, y], [x + e.w, y], [x + e.w, y + e.h], [x, y + e.h]] }, layerOverride);
+      break;
+    }
     case 'dim': case 'hatch':
       throw new Error(`${e.t} must be expanded before writing`);
   }

@@ -5,6 +5,8 @@ import { drawingNumber } from '../core/schedule.js';
 import type { BBox, Entity, Pt, View } from './entities.js';
 import { bbox, place } from './entities.js';
 import { doorViews } from './door-drawing.js';
+import type { TitleBlock } from '../core/types.js';
+import { fillTokens, hasTokens, tbFrame, type TbValues } from './titleblock.js';
 
 export type SheetSize = 'A3' | 'A2' | 'A1';
 export const SHEETS: Record<SheetSize, [number, number]> = { A3: [420, 297], A2: [594, 420], A1: [841, 594] };
@@ -15,6 +17,7 @@ const DETAIL_SCALES = [2, 5, 10, 20];
 export interface SheetOptions {
   size: SheetSize;
   mainScale?: number; // force a scale; otherwise the largest that fits
+  titleBlock?: TitleBlock; // client title block instead of the DORSCH standard one
 }
 
 export interface Sheet {
@@ -48,11 +51,17 @@ function fits(row: Placed[], width: number): boolean {
 
 export function composeSheet(p: Project, d: Door, opt: SheetOptions): Sheet {
   const [PW, PH] = SHEETS[opt.size];
+  const tb = opt.titleBlock;
+  const frame = tb ? tbFrame(tb, PW, PH, MARGIN) : null;
+  const tokens = tb ? hasTokens(tb) : false;
+  // free drawing area (paper mm); a client title block without {PLACEHOLDERS} gets a DORSCH data box
+  const area = frame ? frame.area : { x0: MARGIN, y0: MARGIN + TB_H, x1: PW - MARGIN, y1: PH - MARGIN };
+  const boxH = frame && !tokens ? DATA_H + 4 : 0;
   const views = doorViews(d);
   const mains = views.filter((v) => v.kind === 'main');
   const details = views.filter((v) => v.kind === 'detail');
-  const areaW = PW - 2 * MARGIN - 8;
-  const areaH = PH - 2 * MARGIN - TB_H - 8;
+  const areaW = area.x1 - area.x0 - 8;
+  const areaH = area.y1 - area.y0 - 8;
   let chosen: { S: number; sd: number; row1: Placed[]; row2: Placed[] } | null = null;
   const scales = opt.mainScale ? [opt.mainScale] : MAIN_SCALES;
   outer: for (const S of scales) {
@@ -77,9 +86,9 @@ export function composeSheet(p: Project, d: Door, opt: SheetOptions): Sheet {
 
   // lay out rows (paper mm), row 1 at the top
   const h1 = Math.max(...row1.map((r) => r.h));
-  const top = PH - MARGIN - 4;
+  const top = area.y1 - 4;
   const y1base = top - h1; // bottom of row 1 boxes
-  const y2base = MARGIN + TB_H + 4 + TITLE_SPACE;
+  const y2base = area.y0 + 4 + TITLE_SPACE;
   const layRow = (row: Placed[], yb: number, width: number, x0: number) => {
     const used = row.reduce((s, r) => s + r.w, 0);
     const gap = row.length > 1 ? Math.min(GAP * 3, (width - used) / (row.length - 1)) : 0;
@@ -95,15 +104,48 @@ export function composeSheet(p: Project, d: Door, opt: SheetOptions): Sheet {
       x += r.w + gap;
     }
   };
-  layRow(row1, y1base, areaW, MARGIN + 4);
-  layRow(row2, y2base, areaW - NOTES_W - GAP, MARGIN + 4);
+  layRow(row1, y1base, areaW, area.x0 + 4);
+  layRow(row2, y2base, areaW - NOTES_W - GAP, area.x0 + 4);
 
-  // border and title block
-  ents.push({ t: 'poly', layer: 'A-SHEET', closed: true, pts: [at([0, 0]), at([PW, 0]), at([PW, PH]), at([0, PH])] });
-  ents.push({ t: 'poly', layer: 'A-SHEET', closed: true, pts: [at([MARGIN, MARGIN]), at([PW - MARGIN, MARGIN]), at([PW - MARGIN, PH - MARGIN]), at([MARGIN, PH - MARGIN])] });
-  ents.push(...titleBlock(p, d, S, PW, sd, opt.size));
-  ents.push(...notes(d, S, PW, y1base - 16));
-  return { size: opt.size, paper: [PW, PH], S, mainScale: S, detailScale: sd, entities: ents, drawingNo: drawingNumber(p, d), door: d };
+  const drawingNo = drawingNumber(p, d);
+  if (!frame || frame.ownBorder) {
+    ents.push({ t: 'poly', layer: 'A-SHEET', closed: true, pts: [at([0, 0]), at([PW, 0]), at([PW, PH]), at([0, PH])] });
+    ents.push({ t: 'poly', layer: 'A-SHEET', closed: true, pts: [at([MARGIN, MARGIN]), at([PW - MARGIN, MARGIN]), at([PW - MARGIN, PH - MARGIN]), at([MARGIN, PH - MARGIN])] });
+  }
+  if (tb && frame) {
+    const vals = tbValues(p, d, S, sd, opt.size, drawingNo);
+    const k = frame.s * S;
+    for (const e of place(tb.entities, k, k, frame.x * S, frame.y * S)) ents.push(e.t === 'text' && tokens ? { ...e, s: fillTokens(e.s, vals) } : e);
+    if (!tokens) ents.push(...dataBox(vals, S, area.x1 - NOTES_W, area.y0));
+  } else ents.push(...titleBlock(p, d, S, PW, sd, opt.size));
+  ents.push(...notes(d, S, area.x1 - NOTES_W, y1base - 16, area.y0 + boxH + 2));
+  return { size: opt.size, paper: [PW, PH], S, mainScale: S, detailScale: sd, entities: ents, drawingNo, door: d };
+}
+
+function tbValues(p: Project, d: Door, S: number, sd: number, size: SheetSize, drawingNo: string): TbValues {
+  return {
+    PROJECT: p.name, PROJECT_NO: p.number, CLIENT: p.client, CONSULTANT: p.consultant, LOCATION: p.location,
+    DRAWING_NO: drawingNo, DRAWING_TITLE: `DOOR ${d.mark} - ${d.doorType || 'DOOR DETAILS'}`.toUpperCase(), DOOR: d.mark,
+    SCALE: `1:${S} (details 1:${sd})`, DATE: p.date, REV: d.revision || p.revision, STATUS: d.status.toUpperCase(),
+    DRAWN: p.preparedBy, CHECKED: p.checkedBy, APPROVED: p.approvedBy, SHEET_SIZE: size,
+  };
+}
+
+const DATA_H = 26;
+
+// Compact sheet-data box used with a client title block that has no placeholders.
+function dataBox(v: TbValues, S: number, x0: number, y0: number): Entity[] {
+  const at = (x: number, y: number): Pt => [x * S, y * S];
+  const w = NOTES_W, x1 = x0 + w, y1 = y0 + DATA_H;
+  const es: Entity[] = [{ t: 'poly', layer: 'A-TITLE', closed: true, pts: [at(x0, y0), at(x1, y0), at(x1, y1), at(x0, y1)] }];
+  const rows: [string, string][] = [['Drawing no.', v.DRAWING_NO ?? ''], ['Door', v.DOOR ?? ''], ['Scale', v.SCALE ?? ''], ['Rev / date', `${v.REV ?? ''}  ${v.DATE ?? ''}`], ['Status', v.STATUS ?? '']];
+  rows.forEach(([k, val], i) => {
+    const y = y1 - 5 - i * 4.8;
+    es.push({ t: 'text', layer: 'A-TITLE', p: at(x0 + 2, y), h: 1.8 * S, s: k.toUpperCase(), align: 'left' });
+    es.push({ t: 'text', layer: 'A-TEXT', p: at(x0 + 26, y), h: 2.4 * S, s: val || '-', align: 'left' });
+  });
+  es.push({ t: 'line', layer: 'A-TITLE', a: at(x0 + 24, y0), b: at(x0 + 24, y1) });
+  return es;
 }
 
 function titleBlock(p: Project, d: Door, S: number, PW: number, sd: number, size: SheetSize): Entity[] {
@@ -147,14 +189,13 @@ function titleBlock(p: Project, d: Door, S: number, PW: number, sd: number, size
   return es;
 }
 
-function notes(d: Door, S: number, PW: number, yTop: number): Entity[] {
-  const x = PW - MARGIN - NOTES_W;
+function notes(d: Door, S: number, x: number, yTop: number, yMin: number): Entity[] {
   const banner = d.status !== 'approved' ? [`${d.status.toUpperCase().replace('-', ' ')} - NOT FOR CONSTRUCTION`, ''] : [];
   const lines = [
     ...banner,
     'NOTES',
     '1. All dimensions in millimetres. Do not scale.',
-    '2. Generated from the DOCHS door register record.',
+    '2. Generated from the DORSCH door register record.',
     '3. Sections are schematic: frame profile from entered',
     '   width / depth / rebate / gaps. Verify against the',
     '   approved manufacturer shop drawing.',
@@ -163,7 +204,7 @@ function notes(d: Door, S: number, PW: number, yTop: number): Entity[] {
     '5. Hinge positions measured from bottom of leaf.',
     '   Handle height measured from finished floor.',
     '6. Fire / acoustic / access-control compliance is',
-    '   not assessed by DOCHS; confirm with consultants.',
+    '   not assessed by DORSCH; confirm with consultants.',
     '',
     `FRAME: ${d.frameMaterial || '-'} ${d.frameFinish}`.trim(),
     `LEAF: ${d.leafMaterial || '-'} ${d.leafCore} ${d.leafFacing}`.trim(),
@@ -173,7 +214,9 @@ function notes(d: Door, S: number, PW: number, yTop: number): Entity[] {
     `REMARKS: ${d.remarks || '-'}`.slice(0, 60),
   ];
   const head = banner.length ? [0, 2] : [0];
-  return lines.map((s, i) => ({ t: 'text', layer: head.includes(i) ? 'A-TITLE' : 'A-TEXT', p: [x * S, (yTop - i * 4.2) * S], h: (head.includes(i) ? 3 : 2) * S, s, align: 'left' }) as Entity);
+  // tighten the notes when the free area is short (client title blocks)
+  const k = Math.max(0.6, Math.min(1, (yTop - yMin) / (lines.length * 4.2)));
+  return lines.map((s, i) => ({ t: 'text', layer: head.includes(i) ? 'A-TITLE' : 'A-TEXT', p: [x * S, (yTop - i * 4.2 * k) * S], h: (head.includes(i) ? 3 : 2) * k * S, s, align: 'left' }) as Entity);
 }
 
 // Several sheets side by side in one model space (floor / category set).

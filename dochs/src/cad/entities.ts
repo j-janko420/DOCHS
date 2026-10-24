@@ -40,7 +40,8 @@ export type Entity =
   | { t: 'circle'; layer: Layer; c: Pt; r: number }
   | { t: 'text'; layer: Layer; p: Pt; h: number; s: string; align?: 'left' | 'center' | 'right'; valign?: 'base' | 'middle' | 'top'; rot?: number; dp?: Pt }
   | { t: 'dim'; layer: Layer; a: Pt; b: Pt; dir: 'h' | 'v'; off: number; h: number; value: number }
-  | { t: 'hatch'; layer: Layer; x0: number; y0: number; x1: number; y1: number; spacing: number };
+  | { t: 'hatch'; layer: Layer; x0: number; y0: number; x1: number; y1: number; spacing: number }
+  | { t: 'image'; layer: Layer; p: Pt; w: number; h: number; src: string }; // p = bottom-left; src = JPEG data URL
 
 export interface View {
   key: string;
@@ -68,6 +69,7 @@ export function place(es: Entity[], f: number, k: number, dx: number, dy: number
         break;
       }
       case 'dim': out.push({ ...e, a: tp(e.a, f, dx, dy), b: tp(e.b, f, dx, dy), off: e.off * k, h: e.h * k }); break;
+      case 'image': out.push({ ...e, p: tp(e.p, f, dx, dy), w: e.w * f, h: e.h * f }); break;
       case 'hatch': {
         const [x0, y0] = tp([e.x0, e.y0], f, dx, dy);
         const [x1, y1] = tp([e.x1, e.y1], f, dx, dy);
@@ -163,6 +165,7 @@ export function bbox(es: Entity[]): BBox {
         break;
       }
       case 'hatch': add([e.x0, e.y0]); add([e.x1, e.y1]); break;
+      case 'image': add(e.p); add([e.p[0] + e.w, e.p[1] + e.h]); break;
     }
   }
   if (!Number.isFinite(x0)) return { x0: 0, y0: 0, x1: 0, y1: 0 };

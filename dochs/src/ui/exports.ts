@@ -8,6 +8,7 @@ import { materialSchedule } from '../core/materials.js';
 import { composeSet, composeSheet, type Sheet } from '../cad/sheet.js';
 import { toDxf } from '../cad/dxf.js';
 import { toSvg } from '../cad/svg.js';
+import { toPdf, type PdfPageSpec } from '../cad/pdf.js';
 import { download, safeName, toast } from './dom.js';
 import { ui } from './state.js';
 
@@ -24,7 +25,7 @@ export function scopeLabel(p: Project): string {
 }
 
 export function sheetFor(p: Project, d: Door): Sheet {
-  return composeSheet(p, d, { size: ui.sheetSize, mainScale: ui.mainScale || undefined });
+  return composeSheet(p, d, { size: ui.sheetSize, mainScale: ui.mainScale || undefined, titleBlock: p.titleBlock });
 }
 
 export function doorDxf(p: Project, d: Door): string {
@@ -57,6 +58,28 @@ export function setDxf(p: Project, doors: Door[]): { dxf: string; ok: Door[]; bl
   return { dxf, ok, blocked };
 }
 
+const pdfPage = (s: Sheet): PdfPageSpec => ({ entities: s.entities, paper: s.paper, S: s.S });
+
+export function sheetPdf(p: Project, doors: Door[]): { bytes: Uint8Array; ok: Door[]; blocked: { d: Door; reasons: string[] }[] } {
+  const { ok, blocked } = split(p, doors);
+  return { bytes: ok.length ? toPdf(ok.map((d) => pdfPage(sheetFor(p, d))), { title: `${p.name} - door drawings`, author: p.preparedBy }) : new Uint8Array(), ok, blocked };
+}
+
+export function exportDoorPdf(p: Project, d: Door) {
+  const gate = drawable(d, p);
+  if (!gate.ok) { toast(`${d.mark}: ${gate.errors.length} error(s) block issue. See QA.`, 'err'); return; }
+  const s = sheetFor(p, d);
+  download(`${safeName(s.drawingNo)}.pdf`, toPdf([pdfPage(s)], { title: s.drawingNo, author: p.preparedBy }), 'application/pdf');
+  toast(`PDF exported: ${s.drawingNo} (${s.size}, true scale)`, 'ok');
+}
+
+export function exportSetPdf(p: Project, doors: Door[]) {
+  const r = sheetPdf(p, doors);
+  if (!r.ok.length) { toast('No drawable doors in scope (all have errors)', 'err'); return; }
+  download(`${safeName(p.name)}_${safeName(scopeLabel(p))}_drawings.pdf`, r.bytes, 'application/pdf');
+  toast(`Drawing set PDF: ${r.ok.length} sheets${r.blocked.length ? `, ${r.blocked.length} withheld` : ''}`, 'ok');
+}
+
 export function scheduleTables(p: Project, doors: Door[]) {
   return [doorSchedule(p, doors), quantitySummary(p, doors), hardwareTable(p, doors), productTable(p, doors), materialSchedule(p, doors), issuesTable(p, doors)];
 }
@@ -84,19 +107,22 @@ export function buildPackage(p: Project, doors: Door[]): { bytes: Uint8Array; ok
     const s = sheetFor(p, d);
     entries.push({ name: `${root}/dxf/${safeName(s.drawingNo)}.dxf`, data: toDxf(s.entities, { ltscale: s.S, title: s.drawingNo }) });
   }
-  if (ok.length) entries.push({ name: `${root}/${safeName(scope)}_SET.dxf`, data: dxf });
+  if (ok.length) {
+    entries.push({ name: `${root}/${safeName(scope)}_SET.dxf`, data: dxf });
+    entries.push({ name: `${root}/${safeName(scope)}_drawings.pdf`, data: toPdf(ok.map((d) => pdfPage(sheetFor(p, d))), { title: `${p.name} - door drawings`, author: p.preparedBy }) });
+  }
   entries.push({ name: `${root}/project-backup.json`, data: exportProject(p) });
   entries.push({
     name: `${root}/MANIFEST.txt`,
     data: [
-      'DOCHS - DoorChisolution issue package (Designed by i3 Design)',
+      'DORSCH - Door Schedule Solutions: issue package (Designed by i3 Design)',
       `Project: ${p.name} ${p.number}`.trim(),
       `Revision: ${p.revision}   Date: ${p.date}   Status: ${p.status}`,
       `Scope: ${scope}`,
       `Generated: ${new Date().toISOString()}`,
       '',
       `Doors in scope: ${doors.length}`,
-      `Drawings issued (DXF R12, mm, sheet ${ui.sheetSize}): ${ok.length}`,
+      `Drawings issued (DXF R12 + PDF, mm, sheet ${ui.sheetSize}${p.titleBlock ? `, title block ${p.titleBlock.name}` : ''}): ${ok.length}`,
       `Unverified hardware products in scope: ${productTable(p, doors).rows.filter((r) => r[5] === 'No').length}`,
       ...ok.map((d) => `  ${d.mark}  ${floorName(p, d.floorId)}  ${d.status}`),
       `Drawings withheld (hard errors): ${blocked.length}`,
@@ -104,7 +130,7 @@ export function buildPackage(p: Project, doors: Door[]): { bytes: Uint8Array; ok
       '',
       'Notes: DXF files are editable CAD (AutoCAD R12 / AC1009, units mm). Schedules come from the same',
       'door records as the drawings. DWG is not produced. Compliance (fire, acoustic, access, egress)',
-      'is not assessed by DOCHS and must be confirmed by the responsible consultants.',
+      'is not assessed by DORSCH and must be confirmed by the responsible consultants.',
       p.isSample ? '\nWARNING: built from SAMPLE DATA, not project data.' : '',
     ].join('\r\n'),
   });

@@ -1,3 +1,4 @@
+import type { Entity } from '../cad/entities.js';
 // DOCHS data model. All lengths are millimetres. `null` / '' means "not specified"
 // and is never replaced by an invented value: validation flags it for review.
 
@@ -268,6 +269,23 @@ export interface Project {
   incompatibilities: IncompatibilityRule[];
   revisions: Revision[];
   doors: Door[];
+  titleBlock?: TitleBlock; // company title block for drawing sheets (blank = DORSCH standard)
+}
+
+export type TbPlacement = 'full' | 'bottom' | 'right';
+
+// A client title block read from PDF / DXF / image, normalised to mm with the
+// origin at its bottom-left corner, placed on each sheet by `placement`.
+export interface TitleBlock {
+  name: string;
+  source: 'pdf' | 'dxf' | 'image';
+  width: number;
+  height: number;
+  entities: Entity[];
+  placement: TbPlacement;
+  reserveRight: number; // mm of the title block kept clear of drawings (full-sheet frames)
+  reserveBottom: number;
+  notes: string[];
 }
 
 export const CONFIG_LABEL: Record<Configuration, string> = {

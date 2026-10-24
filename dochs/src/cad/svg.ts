@@ -52,13 +52,15 @@ export function toSvg(es: Entity[], o: SvgOptions): string {
         break;
       }
       case 'hatch': break;
+      case 'image': push(e.layer, `<image href="${e.src}" x="${f(e.p[0])}" y="${f(H - e.p[1] - e.h)}" width="${f(e.w)}" height="${f(e.h)}" preserveAspectRatio="none"/>`); break;
     }
   }
   const body = LAYERS.filter((l) => groups.has(l.name)).map((l) => {
     const dash = DASH[l.ltype].map((x) => f(x * o.S)).join(' ');
     return `<g data-layer="${l.name}" stroke="${l.svg}" fill="none" stroke-width="${f(l.weight * o.S)}"${dash ? ` stroke-dasharray="${dash}"` : ''} stroke-linecap="round" stroke-linejoin="round">` +
+      groups.get(l.name)!.filter((s) => s.startsWith('<image')).join('') +
       `<g fill="${l.svg}" stroke="none" font-family="Arial, Helvetica, sans-serif">${groups.get(l.name)!.filter((s) => s.startsWith('<text')).join('')}</g>` +
-      groups.get(l.name)!.filter((s) => !s.startsWith('<text')).join('') + '</g>';
+      groups.get(l.name)!.filter((s) => !s.startsWith('<text') && !s.startsWith('<image')).join('') + '</g>';
   }).join('');
   const size = o.paperMm ? ` width="${o.paperMm[0]}mm" height="${o.paperMm[1]}mm"` : '';
   const bg = o.background ? `<rect x="0" y="0" width="${f(o.width)}" height="${f(H)}" fill="${o.background}"/>` : '';

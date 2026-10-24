@@ -687,3 +687,144 @@ export function pageTable(pg: PdfPage): string[][] {
 export function pageText(pg: PdfPage): string[] {
   return pageLines(pg).map((l) => l.cells.map((c) => c.s).join('  '));
 }
+
+// ---------- vector content (title blocks) ----------
+
+export interface PdfVector {
+  width: number; // pt, display orientation
+  height: number;
+  paths: { pts: [number, number][]; closed: boolean }[];
+  texts: { x: number; y: number; s: string; size: number; rot: number }[];
+  images: { x: number; y: number; w: number; h: number; jpeg: Uint8Array }[];
+  truncated: boolean;
+}
+
+const MAX_SEGS = 40000;
+
+async function runPaths(doc: PdfDoc, data: string, res: PDict | undefined, ctm0: M, out: PdfVector, depth: number) {
+  if (depth > 8) return;
+  const lx = new Lexer(data);
+  const stack: (PVal | { op: string })[] = [];
+  let ctm = ctm0;
+  const gstack: { ctm: M; fw: boolean; sw: boolean }[] = [];
+  let fillWhite = false, strokeWhite = false;
+  let sub: [number, number][] = [];
+  let subs: { pts: [number, number][]; closed: boolean }[] = [];
+  let cur: [number, number] = [0, 0];
+  const T = (x: number, y: number): [number, number] => [x * ctm[0] + y * ctm[2] + ctm[4], x * ctm[1] + y * ctm[3] + ctm[5]];
+  const xres = doc.dict(res?.XObject);
+  const num = (k: number) => Number(stack[stack.length - k]);
+  const flush = () => { if (sub.length > 1) subs.push({ pts: sub, closed: false }); sub = []; };
+  const paint = () => {
+    flush();
+    for (const s of subs) {
+      if (out.paths.length > MAX_SEGS) { out.truncated = true; break; }
+      out.paths.push(s);
+    }
+    subs = [];
+  };
+  for (;;) {
+    const t = lx.next();
+    if (t === undefined) break;
+    if (!(t && typeof t === 'object' && 'op' in t)) { stack.push(t); continue; }
+    switch (t.op) {
+      case 'q': gstack.push({ ctm, fw: fillWhite, sw: strokeWhite }); break;
+      case 'Q': { const g = gstack.pop(); if (g) { ctm = g.ctm; fillWhite = g.fw; strokeWhite = g.sw; } break; }
+      case 'cm': ctm = mul([num(6), num(5), num(4), num(3), num(2), num(1)], ctm); break;
+      // white fills are masks / backgrounds: outlining them would draw boxes that are not on the print
+      case 'g': case 'rg': case 'sc': case 'scn': case 'k': case 'G': case 'RG': case 'SC': case 'SCN': case 'K': {
+        const vals = stack.filter((x): x is number => typeof x === 'number');
+        const white = vals.length > 0 && (/^[kK]$/.test(t.op) ? vals.every((v) => v < 0.05) : vals.every((v) => v > 0.95));
+        if (t.op === t.op.toLowerCase()) fillWhite = white; else strokeWhite = white;
+        break;
+      }
+      case 'm': flush(); cur = [num(2), num(1)]; sub = [T(cur[0], cur[1])]; break;
+      case 'l': cur = [num(2), num(1)]; sub.push(T(cur[0], cur[1])); break;
+      case 'c': case 'v': case 'y': {
+        const p3: [number, number] = [num(2), num(1)];
+        const p1: [number, number] = t.op === 'v' ? cur : [num(6), num(5)];
+        const p2: [number, number] = t.op === 'y' ? p3 : t.op === 'v' ? [num(4), num(3)] : [num(4), num(3)];
+        const p0 = cur;
+        for (let i = 1; i <= 6; i++) {
+          const u = i / 6, a = (1 - u) ** 3, b = 3 * (1 - u) ** 2 * u, c = 3 * (1 - u) * u * u, d = u ** 3;
+          sub.push(T(a * p0[0] + b * p1[0] + c * p2[0] + d * p3[0], a * p0[1] + b * p1[1] + c * p2[1] + d * p3[1]));
+        }
+        cur = p3;
+        break;
+      }
+      case 're': {
+        flush();
+        const [x, y, w, h] = [num(4), num(3), num(2), num(1)];
+        subs.push({ pts: [T(x, y), T(x + w, y), T(x + w, y + h), T(x, y + h)], closed: true });
+        cur = [x, y];
+        break;
+      }
+      case 'h': if (sub.length > 1) { subs.push({ pts: sub, closed: true }); sub = []; } break;
+      case 'S': case 's': case 'f': case 'F': case 'f*': case 'B': case 'B*': case 'b': case 'b*': {
+        if (t.op === 's' || t.op === 'b' || t.op === 'b*') { if (sub.length > 1) { subs.push({ pts: sub, closed: true }); sub = []; } }
+        const fillOnly = /^[fF]\*?$/.test(t.op), strokeOnly = /^[sS]$/.test(t.op);
+        if ((fillOnly && fillWhite) || (strokeOnly && strokeWhite) || (!fillOnly && !strokeOnly && fillWhite && strokeWhite)) { sub = []; subs = []; } else paint();
+        break;
+      }
+      case 'n': sub = []; subs = []; break;
+      case 'Do': {
+        const nm = stack[stack.length - 1];
+        const ref = nm instanceof PName ? xres?.[nm.n] : undefined;
+        const xo = doc.obj(ref);
+        const xd = xo?.v as PDict | undefined;
+        const st = (doc.get(xd?.Subtype) as PName | undefined)?.n;
+        if (xd && st === 'Form') {
+          const mat = doc.get(xd.Matrix);
+          const fm: M = Array.isArray(mat) && mat.length === 6 ? (mat.map((x) => Number(doc.get(x))) as M) : ID;
+          await runPaths(doc, bin(await doc.streamOf(ref)), doc.dict(xd.Resources) ?? res, mul(fm, ctm), out, depth + 1);
+        } else if (xd && st === 'Image' && xo?.s0 !== undefined) {
+          const fl = doc.get(xd.Filter);
+          const f0 = (Array.isArray(fl) ? doc.get(fl[0]) : fl) as PName | undefined;
+          if (f0?.n === 'DCTDecode' && !Array.isArray(fl)) {
+            const [x0, y0] = T(0, 0), [x1, y1] = T(1, 1);
+            out.images.push({ x: Math.min(x0, x1), y: Math.min(y0, y1), w: Math.abs(x1 - x0), h: Math.abs(y1 - y0), jpeg: doc.raw.slice(xo.s0, xo.s1) });
+          }
+        }
+        break;
+      }
+      case 'BI': { const j = data.indexOf('EI', lx.i); lx.i = j < 0 ? data.length : j + 2; break; }
+    }
+    stack.length = 0;
+  }
+}
+
+// Vector content of one page (paths flattened to polylines, text, JPEG images)
+// in pt, origin bottom-left of the displayed page.
+export async function readPdfVector(buf: Uint8Array, pageIndex = 0): Promise<PdfVector> {
+  const doc = new PdfDoc(buf);
+  await doc.init();
+  const pg = doc.pages()[pageIndex];
+  if (!pg) throw new Error('PDF page not found');
+  const c = doc.get(pg.d.Contents);
+  let data = '';
+  for (const r of Array.isArray(c) ? c : [pg.d.Contents]) data += bin(await doc.streamOf(r)) + '\n';
+  const [x0, y0, x1, y1] = pg.box, W = x1 - x0, H = y1 - y0, rotate = pg.rotate;
+  const raw: PdfVector = { width: W, height: H, paths: [], texts: [], images: [], truncated: false };
+  await runPaths(doc, data, pg.res, ID, raw, 0);
+  const glyphs: Glyphs[] = [];
+  await runContent(doc, data, pg.res, ID, glyphs, new Map(), 0);
+  const rot = (x: number, y: number): [number, number] => {
+    const u = x - x0, v = y - y0;
+    if (rotate === 90) return [v, W - u];
+    if (rotate === 180) return [W - u, H - v];
+    if (rotate === 270) return [H - v, u];
+    return [u, v];
+  };
+  const turned = rotate === 90 || rotate === 270;
+  return {
+    width: turned ? H : W,
+    height: turned ? W : H,
+    paths: raw.paths.map((p) => ({ closed: p.closed, pts: p.pts.map(([x, y]) => rot(x, y)) })),
+    texts: glyphs.map((g) => { const [x, y] = rot(g.x, g.y); return { x, y, s: g.s.replace(/\s+/g, ' ').trim(), size: g.size, rot: ((g.dir * 180) / Math.PI) - rotate }; }).filter((t) => t.s),
+    images: raw.images.map((im) => {
+      const [ax, ay] = rot(im.x, im.y), [bx, by] = rot(im.x + im.w, im.y + im.h);
+      return { x: Math.min(ax, bx), y: Math.min(ay, by), w: Math.abs(bx - ax), h: Math.abs(by - ay), jpeg: im.jpeg };
+    }),
+    truncated: raw.truncated,
+  };
+}

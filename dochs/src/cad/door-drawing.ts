@@ -291,6 +291,7 @@ function mirrorView(es: Entity[], W: number): Entity[] {
       case 'text': return { ...e, p: m(e.p), dp: e.dp ? [-e.dp[0], e.dp[1]] : undefined, align: e.align === 'left' ? 'right' : e.align === 'right' ? 'left' : e.align };
       case 'dim': return { ...e, a: m(e.a), b: m(e.b), off: e.dir === 'v' ? -e.off : e.off };
       case 'hatch': return { ...e, x0: W - e.x1, x1: W - e.x0 };
+      case 'image': return { ...e, p: [W - e.p[0] - e.w, e.p[1]] };
     }
   });
 }
