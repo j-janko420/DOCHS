@@ -26,6 +26,12 @@ const VIEWS: { key: string; label: string; icon: string; render: () => HTMLEleme
   { key: 'data', label: 'Project data', icon: 'M4 6c0-2 16-2 16 0v12c0 2-16 2-16 0zM4 6c0 2 16 2 16 0M4 12c0 2 16 2 16 0', render: dataView },
 ];
 
+const NAV_GROUPS = [
+  { label: 'WORKSPACE', keys: ['dashboard', 'doors', 'schedule', 'drawings', 'qa'] },
+  { label: 'DESIGN & LIBRARIES', keys: ['designer', 'reference', 'hardware', 'materials'] },
+  { label: 'PROJECT', keys: ['project', 'import', 'data', 'about'] },
+];
+
 const icon = (d: string) => {
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   s.setAttribute('viewBox', '0 0 24 24');
@@ -60,7 +66,13 @@ function shell(): HTMLElement {
       h('label', { class: 'proj-switch' }, h('span', {}, 'Project'),
         h('select', { id: 'proj-select', onchange: (e: Event) => switchProject((e.target as HTMLSelectElement).value) }, allProjects().map((x) => h('option', { value: x.id, selected: x.id === p.id }, x.name)))),
       h('button', { class: 'btn primary design-btn', onclick: () => openDesigner() }, '+ Design your door'),
-      h('nav', { 'aria-label': 'Main' }, VIEWS.map((v) => h('a', { href: `#/${v.key}`, class: v.key === current.key ? 'on' : '', 'aria-current': v.key === current.key ? 'page' : undefined }, icon(v.icon), h('span', {}, v.label)))),
+      h('nav', { 'aria-label': 'Main' }, NAV_GROUPS.map((group) =>
+        h('section', { class: 'nav-group', 'aria-label': group.label },
+          h('div', { class: 'nav-label' }, group.label),
+          group.keys.map((key) => {
+            const v = VIEWS.find((item) => item.key === key)!;
+            return h('a', { href: `#/${v.key}`, class: v.key === current.key ? 'on' : '', 'aria-current': v.key === current.key ? 'page' : undefined }, icon(v.icon), h('span', {}, v.label));
+          })))),
       h('div', { class: 'side-foot' }, 'Design - Draw - Detail - Schedule - Deliver', h('br'), h('span', {}, `Version ${VERSION}`), h('br'), h('span', { class: 'credit' }, 'Designed by i3 Design')),
     ),
     h('main', { id: 'main' },
