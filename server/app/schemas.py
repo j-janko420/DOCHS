@@ -57,3 +57,23 @@ class SuggestMappingResponse(BaseModel):
     model: str
     mapping: list[str]
     notes: list[str]
+
+
+MediaType = Literal["application/pdf", "image/png", "image/jpeg", "image/webp", "image/gif"]
+
+class ExtractRequest(BaseModel):
+    """A scanned PDF or image to transcribe for DORSCH new-project intake."""
+    model_config = ConfigDict(extra="forbid")
+    provider: Literal["anthropic", "xai", "openai_compatible"]
+    model: str | None = Field(default=None, min_length=1, max_length=150)
+    role: Literal["layout", "schedule", "hardware"]
+    file_name: str = Field(default="", max_length=200)
+    media_type: MediaType
+    # base64 of at most ~15 MB (images over 5 MB are refused by the endpoint)
+    data_base64: str = Field(min_length=8, max_length=20_500_000)
+
+class ExtractResponse(BaseModel):
+    provider: str
+    model: str
+    text: str
+    notes: list[str]

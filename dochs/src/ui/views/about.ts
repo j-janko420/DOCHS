@@ -2,7 +2,7 @@ import { SCHOOL_CSV } from '../../core/samples.js';
 import { download, h, toast } from '../dom.js';
 import { isDemo, setUi } from '../state.js';
 
-export const VERSION = '1.0.0-demo';
+export const VERSION = '2.0.0-beta';
 export const REPO = 'https://github.com/j-janko420/DOCHS';
 
 // Guided test script for people trying the demo. Results stay in this browser

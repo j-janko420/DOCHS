@@ -89,6 +89,31 @@ class AnthropicProvider(AIProvider):
             "output_tokens": int(usage.get("output_tokens", 0)),
         })
 
+    async def read_file(self, model: str | None, media_type: str, data_b64: str, instruction: str, max_tokens: int) -> ProviderResult:
+        key = self.settings.anthropic_api_key
+        if not key:
+            raise ProviderConfigurationError("Anthropic API key is not configured")
+        model = model or self.settings.anthropic_default_model
+        block_type = "document" if media_type == "application/pdf" else "image"
+        content = [
+            {"type": block_type, "source": {"type": "base64", "media_type": media_type, "data": data_b64}},
+            {"type": "text", "text": instruction},
+        ]
+        payload: dict[str, Any] = {"model": model, "max_tokens": max_tokens, "messages": [{"role": "user", "content": content}]}
+        headers = {"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"}
+        if self.settings.anthropic_fallbacks and self.settings.anthropic_base_url.rstrip("/") == "https://api.anthropic.com":
+            headers["anthropic-beta"] = "server-side-fallback-2026-07-01"
+            payload["fallbacks"] = "default"
+        data = await self._post(self.settings.anthropic_base_url + "/v1/messages", headers, payload)
+        if data.get("stop_reason") == "refusal":
+            raise ProviderRefusal("The provider declined this request")
+        text = "\n".join(block.get("text", "") for block in data.get("content", []) if block.get("type") == "text")
+        usage = data.get("usage", {})
+        return ProviderResult(self.name, data.get("model", model), text, {
+            "input_tokens": int(usage.get("input_tokens", 0)),
+            "output_tokens": int(usage.get("output_tokens", 0)),
+        })
+
 class OpenAICompatibleProvider(AIProvider):
     def __init__(self, settings: Settings, name: str, base_url: str, api_key: str, default_model: str):
         super().__init__(settings)
@@ -122,6 +147,33 @@ class OpenAICompatibleProvider(AIProvider):
             "output_tokens": int(usage.get("completion_tokens", 0)),
         })
 
+    async def read_file(self, model: str | None, media_type: str, data_b64: str, instruction: str, max_tokens: int) -> ProviderResult:
+        if media_type == "application/pdf":
+            raise ProviderInputError(f"{self.name} cannot read PDF files here; use the anthropic provider")
+        if not self.api_key:
+            raise ProviderConfigurationError(f"{self.name} API key is not configured")
+        model = model or self.default_model
+        payload: dict[str, Any] = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "messages": [{"role": "user", "content": [
+                {"type": "image_url", "image_url": {"url": f"data:{media_type};base64,{data_b64}"}},
+                {"type": "text", "text": instruction},
+            ]}],
+        }
+        data = await self._post(
+            self.base_url.rstrip("/") + "/chat/completions",
+            {"Authorization": f"Bearer {self.api_key}", "content-type": "application/json"},
+            payload,
+        )
+        try:
+            text = data["choices"][0]["message"]["content"]
+            if not isinstance(text, str):
+                raise TypeError
+        except (KeyError, IndexError, TypeError) as exc:
+            raise ProviderRequestError("Provider returned an unexpected response shape") from exc
+        return ProviderResult(self.name, data.get("model", model), text, {})
+
 class ProviderRegistry:
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -149,3 +201,12 @@ class ProviderRegistry:
         if not provider:
             raise ProviderConfigurationError("Unsupported provider")
         return await provider.chat(request)
+
+    async def read_file(self, provider_name: str, model: str | None, media_type: str, data_b64: str, instruction: str, max_tokens: int = 8000) -> ProviderResult:
+        provider = self.providers.get(provider_name)
+        if not provider:
+            raise ProviderConfigurationError("Unsupported provider")
+        reader = getattr(provider, "read_file", None)
+        if reader is None:
+            raise ProviderInputError("This provider cannot read files")
+        return await reader(model, media_type, data_b64, instruction, max_tokens)

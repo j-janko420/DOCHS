@@ -71,3 +71,23 @@ async def test_anthropic_refusal_is_reported_not_returned_as_empty_text(monkeypa
     provider, _ = _anthropic(monkeypatch, {"stop_reason": "refusal", "stop_details": {"category": "cyber"}, "content": []})
     with pytest.raises(ProviderRefusal, match="cyber"):
         await provider.chat(ChatRequest(provider="anthropic", messages=[{"role": "user", "content": "u"}]))
+
+
+@pytest.mark.asyncio
+async def test_anthropic_reads_pdf_as_document_block_and_image_as_image_block(monkeypatch):
+    provider, sent = _anthropic(monkeypatch, {"content": [{"type": "text", "text": "D-101"}], "model": "claude-opus-5-5", "usage": {}})
+    r = await provider.read_file(None, "application/pdf", "QUJDRA==", "transcribe", 8000)
+    block = sent["payload"]["messages"][0]["content"][0]
+    assert block == {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": "QUJDRA=="}}
+    assert sent["payload"]["model"] == "claude-opus-5-5" and r.text == "D-101"
+    assert "temperature" not in sent["payload"]
+    await provider.read_file(None, "image/png", "QUJDRA==", "transcribe", 8000)
+    assert sent["payload"]["messages"][0]["content"][0]["type"] == "image"
+
+
+@pytest.mark.asyncio
+async def test_openai_compatible_refuses_pdf():
+    settings = Settings(app_env="test", xai_api_key="k", dorchs_api_token="test-token-which-is-long-enough-for-tests")
+    registry = ProviderRegistry(settings)
+    with pytest.raises(ProviderInputError):
+        await registry.read_file("xai", None, "application/pdf", "QUJDRA==", "t")

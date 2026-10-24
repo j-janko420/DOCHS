@@ -83,3 +83,26 @@ def test_suggest_mapping_bounds_input():
     with TestClient(app) as client:
         response = client.post("/v1/dochs/suggest-mapping", headers=auth(), json={"provider": "anthropic", "headers": ["x" * 201]})
         assert response.status_code == 422
+
+
+def test_extract_transcribes_and_cleans(monkeypatch):
+    with TestClient(app) as client:
+        async def fake_read(provider, model, media_type, data_b64, instruction, max_tokens=8000):
+            assert media_type == "image/png" and "Transcribe only what is printed" in instruction and "door schedule" in instruction
+            return ProviderResult("anthropic", "claude-opus-5-5", "```\nDoor No\tFR\nD-1\t[?]\n```", {})
+        monkeypatch.setattr(client.app.state.providers, "read_file", fake_read)
+        response = client.post("/v1/dochs/extract", headers=auth(), json={"provider": "anthropic", "role": "schedule", "file_name": "s.png", "media_type": "image/png", "data_base64": "iVBORw0KGgoAAAA="})
+        assert response.status_code == 200
+        body = response.json()
+        assert body["text"] == "Door No\tFR\nD-1\t[?]"
+        assert body["notes"] == ["1 value(s) could not be read and are marked [?]."]
+
+
+def test_extract_requires_auth_and_limits_images():
+    with TestClient(app) as client:
+        assert client.post("/v1/dochs/extract", json={"provider": "anthropic", "role": "layout", "media_type": "image/png", "data_base64": "AAAAAAAA"}).status_code == 401
+        big = "A" * 7_000_000
+        r = client.post("/v1/dochs/extract", headers=auth(), json={"provider": "anthropic", "role": "layout", "media_type": "image/png", "data_base64": big})
+        assert r.status_code == 413
+        r = client.post("/v1/dochs/extract", headers=auth(), json={"provider": "anthropic", "role": "layout", "media_type": "text/html", "data_base64": "AAAAAAAA"})
+        assert r.status_code == 422

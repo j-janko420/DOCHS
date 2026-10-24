@@ -96,3 +96,29 @@ def parse_mapping(text: str, n_cols: int) -> tuple[list[str], list[str]]:
     if isinstance(model_notes, list):
         notes.extend(str(n)[:300] for n in model_notes[:10])
     return mapping, notes
+
+
+# ---------- transcription for new-project intake ----------
+
+ROLE_HINT = {
+    "layout": "a door layout (floor plan). List every door mark / tag exactly as printed, one per line, then any legend lines and the drawing title block lines (project, client, level, drawing number).",
+    "schedule": "a door schedule. Reproduce the table: one line per row, cells separated by a TAB character, header row first. Also give any project details printed above the table as 'Label: value' lines.",
+    "hardware": "a hardware / ironmongery schedule. For each set write its heading line (e.g. 'Set: HW-01 description'), a 'Doors: ...' line if doors are listed, then one line per item: quantity, TAB, item, TAB, model / reference, TAB, finish, TAB, manufacturer.",
+}
+
+def extract_instruction(role: str) -> str:
+    return (
+        f"This file is {ROLE_HINT[role]}\n"
+        "Transcribe only what is printed. Do not add, infer, correct or complete any value; leave an unreadable value as [?]. "
+        "No commentary, no markdown, no code fences: output the transcription only."
+    )
+
+def clean_transcription(text: str) -> tuple[str, list[str]]:
+    """Strip code fences the model may add anyway; report unreadable values."""
+    notes: list[str] = []
+    t = re.sub(r"^```[a-zA-Z]*\n|\n```\s*$", "", text.strip())
+    lines = [ln.rstrip() for ln in t.splitlines()]
+    unreadable = sum(ln.count("[?]") for ln in lines)
+    if unreadable:
+        notes.append(f"{unreadable} value(s) could not be read and are marked [?].")
+    return "\n".join(lines)[:400_000], notes

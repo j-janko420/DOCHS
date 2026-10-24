@@ -4,8 +4,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, Header, HTTPException, Request
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from .config import get_settings, Settings
-from .schemas import ChatRequest, ChatResponse, SuggestMappingRequest, SuggestMappingResponse
-from .dochs import build_messages, parse_mapping
+from .schemas import ChatRequest, ChatResponse, ExtractRequest, ExtractResponse, SuggestMappingRequest, SuggestMappingResponse
+from .dochs import build_messages, clean_transcription, extract_instruction, parse_mapping
 from fastapi.middleware.cors import CORSMiddleware
 from .providers import ProviderRegistry, ProviderConfigurationError, ProviderInputError, ProviderRefusal, ProviderRequestError
 
@@ -85,3 +85,24 @@ async def suggest_mapping(body: SuggestMappingRequest, request: Request):
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     mapping, notes = parse_mapping(result.text, len(body.headers))
     return SuggestMappingResponse(provider=result.provider, model=result.model, mapping=mapping, notes=notes)
+
+
+@app.post("/v1/dochs/extract", response_model=ExtractResponse, dependencies=[Depends(require_token)])
+async def extract(body: ExtractRequest, request: Request):
+    """Transcribe a scanned PDF or image for new-project intake. The web app runs its own extraction and cross-checks on the text."""
+    raw_len = len(body.data_base64) * 3 // 4
+    if body.media_type != "application/pdf" and raw_len > 5_000_000:
+        raise HTTPException(status_code=413, detail="Images are limited to 5 MB; reduce the resolution or upload a PDF")
+    if raw_len > 15_000_000:
+        raise HTTPException(status_code=413, detail="Files are limited to 15 MB")
+    try:
+        result = await request.app.state.providers.read_file(body.provider, body.model, body.media_type, body.data_base64, extract_instruction(body.role))
+    except ProviderConfigurationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except (ProviderInputError, ProviderRefusal) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ProviderRequestError as exc:
+        logger.warning("AI provider request failed: %s", str(exc))
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    text, notes = clean_transcription(result.text)
+    return ExtractResponse(provider=result.provider, model=result.model, text=text, notes=notes)

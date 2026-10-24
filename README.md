@@ -1,6 +1,6 @@
-# DOCHS - DoorChisolution
+# DORSCH - Door Schedule Solutions
 
-Door schedules, 2D CAD (DXF), 3D and door design from one door register. Designed by **i3 Design**.
+Start a door project from your layouts, master schedule and hardware sets, then get floor-wise schedules, A3 CAD drawings (PDF / DXF), 3D, renders and door design from one door register. Designed by **i3 Design**. (Formerly DOCHS.)
 
 - **Try the demo:** https://j-janko420.github.io/DOCHS/?demo
 - **Release notes:** [CHANGELOG.md](CHANGELOG.md)
@@ -8,7 +8,7 @@ Door schedules, 2D CAD (DXF), 3D and door design from one door register. Designe
 - **Optional API server:** [`server/`](server/README.md)
 
 
-DOCHS turns a door register into floor-wise and category-wise door schedules and editable 2D CAD door drawings (DXF). It is a static web app with no runtime dependencies.
+DORSCH turns a door register into floor-wise and category-wise door schedules and editable 2D CAD door drawings (DXF). It is a static web app with no runtime dependencies.
 
 **Release 0.1 scope (Milestone 1).** The full workflow runs end to end: select a floor, classify the doors, generate the door schedule, create the matching 2D DXF drawings, then export both.
 

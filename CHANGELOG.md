@@ -1,6 +1,54 @@
-# DOCHS - DoorChisolution: release notes
+# DORSCH - Door Schedule Solutions: release notes
 
-Designed by i3 Design.
+Designed by i3 Design. (Formerly DOCHS - DoorChisolution.)
+
+## 2.0.0-beta - start a project from your documents
+
+### New project from the three fundamental inputs
+- Upload **door layouts** (floor-wise or complete), the **master door schedule** and the **hardware / ironmongery sets**, in PDF, Excel, CSV, Word (.docx), text, DXF, DWG or image form.
+- Everything is read in the browser:
+  - PDF text layer, including Bluebeam / Acrobat markups, page rotation and Unicode CAD fonts
+  - Word paragraphs and tables, Excel, CSV and text
+  - DXF text and block attributes
+- Extracted automatically, each value with its source:
+  - project name, number, client, consultant, location, date and revision
+  - the schedule table, with its columns matched
+  - door marks on each layout, with the floor taken from the file name or title
+  - hardware sets (set headings, "Doors:" lists, quantity, item, model, finish, maker)
+- **Cross-check** before creating the project:
+  - scheduled doors not found on the layouts, and marks on the layouts that are not scheduled
+  - legend totals ("LEGEND - 46 DOORS") and the categories that make them up
+  - sets used but not defined, and sets defined but not used
+  - set and door conflicts between the schedule and the hardware file
+- When there is no floor column, doors are placed by the floor-wise layout they appear on. Hardware sets are assigned from the hardware file's door lists.
+- Every value can be reviewed and edited before the project is created, and afterwards. Nothing missing is invented.
+- **Images and scans** can be transcribed by the optional DORSCH server (`POST /v1/dochs/extract`), with DORSCH's own extraction run on the result.
+- **DWG** is detected and explained, not parsed: it is a closed format, so save it as DXF or PDF first.
+- "Try with sample files" loads two floor layout PDFs, a CSV schedule and a Word ironmongery schedule.
+
+### 2D drawings
+- **PDF export:** true-scale vector A3/A2/A1 sheets, for one sheet or the whole set, and included in the issue package.
+- **Company title block** from PDF (kept as vector, logos included), DXF or image. Placement options:
+  - full sheet frame, with the right / bottom title strip found automatically and kept clear
+  - strip along the bottom
+  - strip down the right side
+- `{PROJECT}`, `{DRAWING_NO}`, `{SCALE}`, `{DATE}`, `{REV}` and other placeholders in your block are filled per sheet. Without placeholders a compact DORSCH data box is added.
+
+### 3D & Render
+- Realistic front (outside), back (inside), side-section and top-plan renders, with:
+  - timber, paint, laminate, glass, metal and stone surfaces
+  - light and soft shadows
+- The hardware set is drawn on the correct face in its stated finish:
+  - lever, pull, push plate, kick / armour plate, closer, panic bar
+  - hinges, cylinder / thumbturn, hotel card lock, indicator, viewer, flush bolts, wall reader, track
+- **A3 render sheet**, as PNG at 300 dpi or PDF, carrying the project details, door data, finish swatches and the hardware set table.
+- Shapes are generic in the stated finishes, not manufacturer models. Any assumption is printed on the sheet.
+
+### Brand and interface
+- New **DORSCH** brand header with the tagline "Door Schedule Solutions" and a door-frame mark.
+- Simple client navigation. Settings, import mapping, backup and About / test guide moved to the gear menu.
+- Floating **Design your door** button: a door-open sound, then the design page. Sound can be turned off in the gear menu.
+
 
 ## 1.0.0-demo - first shareable demo (Phase 1, web based)
 
