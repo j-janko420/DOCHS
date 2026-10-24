@@ -12,6 +12,7 @@ declare module 'node:assert/strict' {
     deepEqual(a: unknown, b: unknown, message?: string): void;
     match(s: string, re: RegExp, message?: string): void;
     throws(fn: () => unknown, expected?: RegExp | string): void;
+    rejects(fn: () => Promise<unknown>, expected?: RegExp | string): Promise<void>;
   }
   const assert: Assert;
   export default assert;
@@ -27,4 +28,5 @@ declare module 'node:child_process' {
 }
 declare module 'node:zlib' {
   export function deflateRawSync(data: Uint8Array): Uint8Array;
+  export function deflateSync(data: Uint8Array): Uint8Array;
 }

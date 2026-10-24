@@ -10,7 +10,7 @@ export interface Sheet {
 
 interface Entry { name: string; method: number; compSize: number; offset: number }
 
-function entries(buf: Uint8Array): Entry[] {
+export function entries(buf: Uint8Array): Entry[] {
   const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
   let eocd = -1;
   for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
@@ -31,24 +31,24 @@ function entries(buf: Uint8Array): Entry[] {
   return out;
 }
 
-async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
+export async function inflate(data: Uint8Array, format: 'deflate' | 'deflate-raw' = 'deflate-raw'): Promise<Uint8Array> {
   const DS = (globalThis as unknown as { DecompressionStream?: new (f: string) => TransformStream<Uint8Array, Uint8Array> }).DecompressionStream;
-  if (!DS) throw new Error('This browser cannot read compressed .xlsx files; save the sheet as CSV instead');
-  const stream = new Blob([data as BlobPart]).stream().pipeThrough(new DS('deflate-raw'));
+  if (!DS) throw new Error('This browser cannot read compressed files; use a current Chrome, Edge, Firefox or Safari');
+  const stream = new Blob([data as BlobPart]).stream().pipeThrough(new DS(format));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-async function readEntry(buf: Uint8Array, e: Entry): Promise<string> {
+export async function readEntry(buf: Uint8Array, e: Entry): Promise<string> {
   const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
   if (dv.getUint32(e.offset, true) !== 0x04034b50) throw new Error(`Corrupt zip entry ${e.name}`);
   const start = e.offset + 30 + dv.getUint16(e.offset + 26, true) + dv.getUint16(e.offset + 28, true);
   const raw = buf.subarray(start, start + e.compSize);
-  const data = e.method === 0 ? raw : e.method === 8 ? await inflateRaw(raw) : null;
+  const data = e.method === 0 ? raw : e.method === 8 ? await inflate(raw) : null;
   if (!data) throw new Error(`Unsupported compression in ${e.name}`);
   return new TextDecoder().decode(data);
 }
 
-const unxml = (s: string) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n))).replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16))).replace(/&amp;/g, '&');
+export const unxml = (s: string) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n))).replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16))).replace(/&amp;/g, '&');
 const text = (frag: string) => unxml([...frag.matchAll(/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)].map((m) => m[1]).join(''));
 
 function colIndex(ref: string): number {
