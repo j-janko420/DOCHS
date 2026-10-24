@@ -1,0 +1,14 @@
+# Netlify: build the DORSCH web app from this repository (static site, no server).
+[build]
+  base = "dochs"
+  command = "npm install && npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
