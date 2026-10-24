@@ -31,7 +31,8 @@ const listeners = new Set<() => void>();
 // Demo mode (?demo in the URL): sample projects only, nothing read from or
 // written to this browser's storage, so a shared link never touches real work.
 export function demoOnly(): boolean {
-  return (globalThis as { DOCHS_DEMO?: boolean }).DOCHS_DEMO === true;
+  const g = globalThis as { DORSCH_DEMO?: boolean; DOCHS_DEMO?: boolean };
+  return (g.DORSCH_DEMO ?? g.DOCHS_DEMO) === true;
 }
 
 export function isDemo(): boolean {

@@ -107,7 +107,7 @@ export function importView(): HTMLElement {
         h('label', { class: 'fld inline' }, h('span', {}, 'Header row'), h('select', { id: 'imp-hr', onchange: (e: Event) => { const hr = Number((e.target as HTMLSelectElement).value); set({ headerRow: hr, mapping: autoMapping(rows[hr] ?? []) }); } },
           rows.slice(0, 20).map((r, i) => h('option', { value: String(i), selected: i === st!.headerRow }, `Row ${i + 1}: ${r.filter(Boolean).slice(0, 4).join(', ').slice(0, 60)}`)))))),
     h('section', { class: 'card' }, h('div', { class: 'row gap' }, h('h3', { class: 'grow' }, '2. Column matching'),
-        aiServer() ? h('button', { class: 'btn sm', disabled: aiBusy, title: 'Ask the DOCHS AI server to suggest the matching; you review it before importing', onclick: async () => {
+        aiServer() ? h('button', { class: 'btn sm', disabled: aiBusy, title: 'Ask the DORSCH AI server to suggest the matching; you review it before importing', onclick: async () => {
           const srv = aiServer();
           if (!srv || !st) return;
           aiBusy = true; setUi({});
@@ -121,7 +121,7 @@ export function importView(): HTMLElement {
             toast(`AI suggestion applied: ${changed} column(s) changed. Review before importing.`, 'ok');
           } catch (e) { toast(`AI suggestion failed: ${(e as Error).message}`, 'err'); }
           aiBusy = false; setUi({});
-        } }, aiBusy ? 'Asking AI...' : 'AI suggest') : h('span', { class: 'muted small' }, 'AI suggestions: connect a DOCHS server under Project data')),
+        } }, aiBusy ? 'Asking AI...' : 'AI suggest') : h('span', { class: 'muted small' }, 'AI suggestions: connect a DORSCH server under Project data')),
       markMapped ? null : h('div', { class: 'alert warn' }, 'Choose which column holds the door number.'),
       aiNotes.length ? h('div', { class: 'alert info' }, h('b', {}, 'AI notes: '), aiNotes.join(' ')) : null,
       h('div', { class: 'table-wrap flat' }, h('table', { class: 'grid dense edit' },

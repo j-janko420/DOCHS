@@ -279,7 +279,7 @@ export function sampleProject(): Project {
     catalogue,
     materials,
     incompatibilities: [],
-    revisions: [{ rev: 'P01', date: new Date().toISOString().slice(0, 10), description: 'Sample data issue', by: 'DOCHS' }],
+    revisions: [{ rev: 'P01', date: new Date().toISOString().slice(0, 10), description: 'Sample data issue', by: 'DORSCH' }],
     doors,
   }).project;
 }

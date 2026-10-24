@@ -37,7 +37,7 @@ export function exportProject(p: Project): string {
   return JSON.stringify({ schema: SCHEMA, version: SCHEMA_VERSION, exportedAt: new Date().toISOString(), project: p }, null, 2);
 }
 
-// Accepts a DOCHS backup (or a bare project object) and fills fields added in
+// Accepts a DORSCH backup (or a bare project object) and fills fields added in
 // later versions with blanks. Throws with a readable reason on invalid input.
 export function importProject(text: string): Project {
   let raw: unknown;
@@ -45,7 +45,7 @@ export function importProject(text: string): Project {
   const obj = raw as { schema?: string; project?: unknown };
   const pr = (obj && obj.schema === SCHEMA ? obj.project : raw) as Partial<Project> | null;
   if (!pr || typeof pr !== 'object' || !Array.isArray(pr.doors) || !Array.isArray(pr.floors) || !Array.isArray(pr.buildings))
-    throw new Error('Not a DOCHS project: buildings, floors and doors are required');
+    throw new Error('Not a DORSCH project: buildings, floors and doors are required');
   const base = blankProject(pr.name ?? 'Imported project');
   const project: Project = { ...base, ...pr, id: pr.id || base.id } as Project;
   project.categories = pr.categories ?? [];

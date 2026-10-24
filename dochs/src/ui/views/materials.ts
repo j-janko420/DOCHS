@@ -108,7 +108,7 @@ export function materialsView(): HTMLElement {
   const p = project();
   const tabs = ['Library', 'Material schedule'];
   return h('div', { class: 'view' },
-    h('div', { class: 'view-head' }, h('div', {}, h('h1', {}, 'Materials and finishes'), h('p', { class: 'muted' }, 'Leaf systems, cores, facings, finishes, frames and glazing, with source and submittal status. DOCHS does not invent material data or decide fire / acoustic compliance.'))),
+    h('div', { class: 'view-head' }, h('div', {}, h('h1', {}, 'Materials and finishes'), h('p', { class: 'muted' }, 'Leaf systems, cores, facings, finishes, frames and glazing, with source and submittal status. DORSCH does not invent material data or decide fire / acoustic compliance.'))),
     h('div', { class: 'tabs', role: 'tablist' }, tabs.map((name, i) => h('button', { role: 'tab', 'aria-selected': i === tab ? 'true' : 'false', class: `tab ${i === tab ? 'on' : ''}`, onclick: () => { tab = i; setUi({}); } }, name))),
     tab === 0 ? libraryTab(p) : scheduleTab(p));
 }

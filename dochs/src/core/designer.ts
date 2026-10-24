@@ -43,7 +43,7 @@ export interface DesignInput {
   handleHeight: number;
 }
 
-export const ASSUMPTION_NOTE = 'Created in the DOCHS Door Designer. Frame width, rebate, gaps, undercut, leaf thickness, hinge, handle and vision panel values are starting assumptions: verify against the selected manufacturer system before approval.';
+export const ASSUMPTION_NOTE = 'Created in the DORSCH Door Designer. Frame width, rebate, gaps, undercut, leaf thickness, hinge, handle and vision panel values are starting assumptions: verify against the selected manufacturer system before approval.';
 
 export function defaultDesign(): DesignInput {
   return applyStyle({
@@ -146,7 +146,7 @@ export function designDoor(i: DesignInput): DesignResult {
     handleHeight: sliding || i.hardwareFunction === 'push-pull' ? null : i.handleHeight, hingePositions: hinges,
     pivotOffset: c === 'pivot' ? 100 : null,
     threshold: i.performance === 'acoustic' || i.performance === 'fr-acoustic' ? 'Automatic drop seal' : 'Flush',
-    sourceRef: 'DOCHS Door Designer', remarks: ASSUMPTION_NOTE, status: 'draft',
+    sourceRef: 'DORSCH Door Designer', remarks: ASSUMPTION_NOTE, status: 'draft',
   });
   const clearWidth = !sliding && n === 1 ? aperture - i.leafThickness : null;
   return { door, leaves, leafHeight, aperture, clearWidth, errors, notes };

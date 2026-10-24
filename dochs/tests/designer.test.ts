@@ -91,5 +91,5 @@ test('reference library installs once, without duplicates', () => {
   const r = installReference(P, { hardware: true, materials: true });
   assert.ok(r.added > 80);
   assert.equal(installReference(r.project, { hardware: true, materials: true }).added, 0);
-  assert.ok(r.project.catalogue.filter((c) => c.notes.startsWith('DOCHS reference type')).every((c) => !c.verified && !c.manufacturer));
+  assert.ok(r.project.catalogue.filter((c) => c.notes.startsWith('DORSCH reference type')).every((c) => !c.verified && !c.manufacturer));
 });

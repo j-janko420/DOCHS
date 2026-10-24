@@ -121,6 +121,14 @@ export async function readDoc(name: string, bytes: Uint8Array, role: Role): Prom
   return doc;
 }
 
+// A document from transcribed text (AI reading of an image or scan): same
+// extraction as any text file, marked with where the text came from.
+export function docFromText(name: string, role: Role, kind: Kind, text: string, note: string): IntakeDoc {
+  const pages = [textLines(text)];
+  const tables = /\t/.test(text) ? [{ name: 'transcribed', rows: text.split(/\r\n|\r|\n/).filter((l) => l.trim()).map((l) => l.split('\t')) }] : [];
+  return { name, role, kind, pages, tables, notes: [note, `${pages[0].length} lines transcribed.`], textFound: pages[0].length > 0, needsAi: false };
+}
+
 // ---------- project details ----------
 
 export type InfoKey = 'name' | 'number' | 'client' | 'consultant' | 'location' | 'date' | 'revision';
@@ -472,7 +480,10 @@ export function crossCheck(x: CrossInput): Finding[] {
     for (const l of x.layouts) {
       if (l.legendTotal !== null) {
         const sum = l.legendParts.reduce((a, p) => a + p.n, 0);
-        f.push({ sev: l.legendTotal === sched.marks.length ? 'ok' : 'warning', area: 'Layouts', text: `${l.doc}: legend states ${l.legendTotal} doors, schedule has ${sched.marks.length}.` });
+        // a complete layout is compared with the whole schedule, a floor-wise one with the marks read on it
+        const whole = x.layouts.length === 1;
+        const against = whole ? sched.marks.length : l.marks.length;
+        f.push({ sev: l.legendTotal === against ? 'ok' : 'warning', area: 'Layouts', text: `${l.doc}: legend states ${l.legendTotal} doors; ${whole ? `the schedule has ${against}` : `${against} door marks read on this layout`}.` });
         if (l.legendParts.length && sum !== l.legendTotal) f.push({ sev: 'warning', area: 'Layouts', text: `${l.doc}: legend categories add up to ${sum}, not the stated ${l.legendTotal} (${l.legendParts.map((p) => `${p.label} ${p.n}`).join('; ')}).` });
         else if (l.legendParts.length) f.push({ sev: 'ok', area: 'Layouts', text: `${l.doc}: legend categories add up to the stated ${l.legendTotal}.` });
       }

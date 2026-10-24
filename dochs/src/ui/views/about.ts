@@ -35,7 +35,7 @@ export function feedbackReport(fb: ReturnType<typeof load>): string {
   const label = { '': 'not tested', pass: 'PASS', fail: 'FAIL', issue: 'WORKS WITH ISSUES' };
   const done = SCENARIOS.filter((s) => fb.results[s.id]?.status);
   return [
-    `DOCHS ${VERSION} - test report`,
+    `DORSCH ${VERSION} - test report`,
     `Tester: ${fb.tester || '-'}`,
     `Date: ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`,
     `Browser: ${typeof navigator === 'undefined' ? '-' : navigator.userAgent}`,
@@ -56,10 +56,10 @@ export function aboutView(): HTMLElement {
   const done = SCENARIOS.filter((s) => fb.results[s.id]?.status).length;
   return h('div', { class: 'view' },
     h('div', { class: 'view-head' },
-      h('div', {}, h('h1', {}, 'About and test guide'), h('p', { class: 'muted' }, `DOCHS - DoorChisolution ${VERSION}. Designed by i3 Design.`)),
+      h('div', {}, h('h1', {}, 'About and test guide'), h('p', { class: 'muted' }, `DORSCH - Door Schedule Solutions ${VERSION}. Designed by i3 Design.`)),
       isDemo() ? null : h('a', { class: 'btn', href: '?demo' }, 'Open the demo')),
     h('div', { class: 'cols' },
-      h('section', { class: 'card' }, h('h3', {}, 'What DOCHS does'),
+      h('section', { class: 'card' }, h('h3', {}, 'What DORSCH does'),
         h('p', {}, 'One door register drives floor-wise and category-wise door schedules, hardware and material schedules, QA checks, dimensioned 2D CAD sheets (editable DXF), a 3D model and issue packages. Doors can be entered, imported from a spreadsheet or designed from a structural opening.'),
         h('h4', {}, 'In this demo version'),
         h('ul', { class: 'plain small' },
@@ -68,7 +68,7 @@ export function aboutView(): HTMLElement {
         h('ul', { class: 'plain small' },
           h('li', {}, '- Sample projects and library items are illustrative, not manufacturer data.'),
           h('li', {}, '- Frame sections and designer values are starting assumptions: verify against the approved manufacturer system.'),
-          h('li', {}, '- Fire, acoustic, access-control and egress compliance is not assessed by DOCHS.'),
+          h('li', {}, '- Fire, acoustic, access-control and egress compliance is not assessed by DORSCH.'),
           h('li', {}, '- DWG output and PDF / image drawing extraction are not included yet.'),
           h('li', {}, '- Projects are stored in this browser only: export a JSON backup to keep or share work.'),
           h('li', {}, '- Demo mode saves nothing.')),
@@ -115,8 +115,8 @@ export function welcome(): HTMLElement | null {
   const close = () => { try { sessionStorage.setItem('dochs.welcomed', '1'); } catch { /* ignore */ } el.remove(); };
   const el = h('div', { class: 'dz-overlay', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'wl-title' },
     h('div', { class: 'welcome' },
-      h('h2', { id: 'wl-title' }, 'Welcome to the DOCHS demo'),
-      h('p', {}, 'DoorChisolution turns a door register into floor-wise schedules, editable 2D CAD drawings (DXF), a 3D model and issue packages.'),
+      h('h2', { id: 'wl-title' }, 'Welcome to the DORSCH demo'),
+      h('p', {}, 'Door Schedule Solutions turns a door register into floor-wise schedules, editable 2D CAD drawings (DXF), a 3D model and issue packages.'),
       h('p', { class: 'muted small' }, 'Three sample projects are loaded. Try anything: nothing is saved and your own projects are not touched.'),
       h('div', { class: 'row gap' },
         h('button', { class: 'btn primary', onclick: () => { close(); setUi({ view: 'about' }); } }, 'Start the guided test'),

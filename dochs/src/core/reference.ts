@@ -1,7 +1,7 @@
 import type { CatalogueItem, Configuration, HardwareCategory, MaterialItem, MaterialKind, Project } from './types.js';
 import { uid } from './defaults.js';
 
-// DOCHS reference library: generic door types, materials, finishes and hardware
+// DORSCH reference library: generic door types, materials, finishes and hardware
 // types with their function. These are descriptions of product *types*, not
 // manufacturer data: nothing here states a tested rating, size or model. Items
 // copied into a project are marked unverified until a real product is entered.
@@ -227,12 +227,12 @@ export const HINGE_CHOICES = ['Butt hinge', 'Ball-bearing butt hinge', 'Conceale
 
 const blankCatalogue = (t: HardwareType): CatalogueItem => ({
   id: uid('cat'), category: t.category, manufacturer: '', model: '', description: t.name, finish: '', dimensions: '', mounting: '', fireRated: '',
-  powered: Boolean(t.powered), sourceRef: '', verified: false, notes: `DOCHS reference type: ${t.func}`,
+  powered: Boolean(t.powered), sourceRef: '', verified: false, notes: `DORSCH reference type: ${t.func}`,
 });
 
 const blankMaterial = (m: RefMaterial): MaterialItem => ({
   id: uid('mat'), kind: m.kind, name: m.name, manufacturer: '', product: '', code: '', thickness: null, fireRated: '', fireRating: '', acoustic: '',
-  sourceRef: '', approvalRef: '', approval: '', verified: false, notes: `DOCHS reference type: ${m.note}`,
+  sourceRef: '', approvalRef: '', approval: '', verified: false, notes: `DORSCH reference type: ${m.note}`,
 });
 
 // Returns the project with the named reference hardware types present in the

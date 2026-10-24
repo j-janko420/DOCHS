@@ -118,7 +118,7 @@ function rulesTab(p: Project): HTMLElement {
   const pick = (id: string, value: string, on: (v: string) => void) => h('select', { id, onchange: (e: Event) => on((e.target as HTMLSelectElement).value) },
     h('option', { value: '', selected: !value }, '- product -'), p.catalogue.map((c) => h('option', { value: c.id, selected: c.id === value }, productName(c))));
   return h('div', { class: 'stack' },
-    h('div', { class: 'alert info' }, 'DOCHS never assumes two products are compatible or incompatible. Record each known incompatibility here with its source (manufacturer note, consultant comment, RFI). Any set containing both products is flagged.'),
+    h('div', { class: 'alert info' }, 'DORSCH never assumes two products are compatible or incompatible. Record each known incompatibility here with its source (manufacturer note, consultant comment, RFI). Any set containing both products is flagged.'),
     p.incompatibilities.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'grid dense edit' },
       h('thead', {}, h('tr', {}, ['Product A', 'Product B', 'Reason', 'Source', ''].map((x) => h('th', {}, x)))),
       h('tbody', {}, p.incompatibilities.map((r) => h('tr', {},
@@ -157,7 +157,7 @@ export function hardwareView(): HTMLElement {
   const tabs = ['Catalogue', 'Sets', 'Incompatibility rules', 'Takeoff'];
   const body = [catalogueTab, setsTab, rulesTab, takeoffTab][tab](p);
   return h('div', { class: 'view' },
-    h('div', { class: 'view-head' }, h('div', {}, h('h1', {}, 'Hardware library'), h('p', { class: 'muted' }, 'Product catalogue, hardware sets, incompatibility rules and takeoff. Product data is entered from manufacturer sources; DOCHS does not invent specifications or assume compatibility.'))),
+    h('div', { class: 'view-head' }, h('div', {}, h('h1', {}, 'Hardware library'), h('p', { class: 'muted' }, 'Product catalogue, hardware sets, incompatibility rules and takeoff. Product data is entered from manufacturer sources; DORSCH does not invent specifications or assume compatibility.'))),
     h('div', { class: 'tabs', role: 'tablist' }, tabs.map((name, i) => h('button', { role: 'tab', 'aria-selected': i === tab ? 'true' : 'false', class: `tab ${i === tab ? 'on' : ''}`, onclick: () => { tab = i; setUi({}); } }, name))),
     body);
 }

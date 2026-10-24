@@ -1,5 +1,5 @@
 import type { Entity } from '../cad/entities.js';
-// DOCHS data model. All lengths are millimetres. `null` / '' means "not specified"
+// DORSCH data model. All lengths are millimetres. `null` / '' means "not specified"
 // and is never replaced by an invented value: validation flags it for review.
 
 export type Configuration =
@@ -139,7 +139,7 @@ export const HARDWARE_CATEGORIES: Record<HardwareCategory, string> = {
   electrical: 'Electrical / power', 'sliding-gear': 'Sliding gear', other: 'Other',
 };
 
-// A catalogue product. Values are entered from manufacturer sources; DOCHS never
+// A catalogue product. Values are entered from manufacturer sources; DORSCH never
 // fills them in. `verified` records that someone checked them against `sourceRef`.
 export interface CatalogueItem {
   id: string;
@@ -179,7 +179,7 @@ export const APPROVAL_LABEL: Record<ApprovalStatus, string> = {
 };
 
 // A material, finish or system entered from a manufacturer source or approved
-// material submittal. DOCHS never fills these values in.
+// material submittal. DORSCH never fills these values in.
 export interface MaterialItem {
   id: string;
   kind: MaterialKind;
@@ -270,6 +270,13 @@ export interface Project {
   revisions: Revision[];
   doors: Door[];
   titleBlock?: TitleBlock; // company title block for drawing sheets (blank = DORSCH standard)
+  intake?: IntakeRecord; // what the project was started from, with the cross-check at that time
+}
+
+export interface IntakeRecord {
+  at: string;
+  files: { name: string; role: string; notes: string[] }[];
+  findings: { sev: 'error' | 'warning' | 'info' | 'ok'; area: string; text: string }[];
 }
 
 export type TbPlacement = 'full' | 'bottom' | 'right';

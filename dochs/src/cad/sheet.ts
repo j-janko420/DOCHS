@@ -160,9 +160,9 @@ function titleBlock(p: Project, d: Door, S: number, PW: number, sd: number, size
   // logo cell
   es.push({ t: 'poly', layer: 'A-TITLE', closed: true, pts: [at(x0 + 5, y0 + 14), at(x0 + 17, y0 + 14), at(x0 + 17, y0 + 34), at(x0 + 5, y0 + 34)] });
   es.push({ t: 'poly', layer: 'A-TITLE', closed: true, pts: [at(x0 + 8, y0 + 14), at(x0 + 15, y0 + 17), at(x0 + 15, y0 + 37), at(x0 + 8, y0 + 34)] });
-  es.push({ t: 'text', layer: 'A-TITLE', p: at(x0 + 21, y0 + 24), h: 6 * S, s: 'DOCHS', align: 'left' });
-  es.push({ t: 'text', layer: 'A-TEXT', p: at(x0 + 21, y0 + 17), h: 2.2 * S, s: 'DoorChisolution', align: 'left' });
-  es.push({ t: 'text', layer: 'A-TEXT', p: at(x0 + 5, y0 + 5), h: 1.8 * S, s: 'DOCHS - Designed by i3 Design', align: 'left' });
+  es.push({ t: 'text', layer: 'A-TITLE', p: at(x0 + 21, y0 + 24), h: 6 * S, s: 'DORSCH', align: 'left' });
+  es.push({ t: 'text', layer: 'A-TEXT', p: at(x0 + 21, y0 + 17), h: 2.2 * S, s: 'Door Schedule Solutions', align: 'left' });
+  es.push({ t: 'text', layer: 'A-TEXT', p: at(x0 + 5, y0 + 5), h: 1.8 * S, s: 'DORSCH - Designed by i3 Design', align: 'left' });
   // project
   let x = cols[1] + 3;
   label(x, y1 - 5, 'Project'); val(x, y1 - 10, `${p.name}${p.number ? ' (' + p.number + ')' : ''}`);

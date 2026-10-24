@@ -9,7 +9,7 @@ import type { Issue, Severity } from './validate.js';
 // Material and finish library: door material fields link to library items so
 // schedules, QA and submittal status come from one source.
 
-const DATA = 'DOCHS data completeness rule';
+const DATA = 'DORSCH data completeness rule';
 const LIB = 'Project material library';
 const SPEC = 'Confirm against approved project specification / jurisdiction';
 const APPROVED = new Set(['approved', 'approved-as-noted']);

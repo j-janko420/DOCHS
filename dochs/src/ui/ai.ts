@@ -2,7 +2,7 @@ import type { Target } from '../core/importer.js';
 import { TARGETS } from '../core/importer.js';
 import { isDemo } from './state.js';
 
-// Optional connection to the DOCHS API server (server/ in this repository).
+// Optional connection to the DORSCH API server (server/ in this repository).
 // The token is kept in this browser only; provider API keys stay on the server.
 
 export interface AiServer { url: string; token: string; provider: 'anthropic' | 'xai' | 'openai_compatible' }
@@ -51,4 +51,14 @@ export async function suggestMapping(s: AiServer, headers: string[], samples: st
   const known = new Set<string>(TARGETS.map((t) => t.key));
   const mapping = headers.map((_, i) => { const v = r.mapping?.[i]; return (typeof v === 'string' && known.has(v) ? v : '') as Target; });
   return { mapping, notes: Array.isArray(r.notes) ? r.notes.map(String) : [] };
+}
+
+// Reads an image / scanned PDF with the server's model. The model only
+// transcribes what is printed (tab-separated table rows, one line per line);
+// DORSCH then runs its own extraction and cross-checks on that text.
+export async function extractText(s: AiServer, name: string, mediaType: string, bytes: Uint8Array, role: string): Promise<{ text: string; notes: string[] }> {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  const r = await call<{ text: unknown; notes: unknown[] }>(s, '/v1/dochs/extract', { provider: s.provider, role, file_name: name.slice(0, 200), media_type: mediaType, data_base64: btoa(bin) });
+  return { text: typeof r.text === 'string' ? r.text : '', notes: Array.isArray(r.notes) ? r.notes.map(String) : [] };
 }

@@ -8,7 +8,7 @@ import { hardwareTakeoff } from '../../core/schedule.js';
 import { exportProject, importProject, removeBuilding, removeCategory, removeFloor } from '../../core/project-ops.js';
 import { confirmButton, download, h, safeName, sevBadge, toast } from '../dom.js';
 import { aiServer, saveAiServer, testServer, type AiServer } from '../ai.js';
-import { addProject, allProjects, isDemo, deleteProject, project, setProject, setUi, storageAvailable, switchProject } from '../state.js';
+import { addProject, allProjects, isDemo, deleteProject, project, setProject, setUi, switchProject } from '../state.js';
 
 const guard = (f: () => void) => { try { f(); } catch (e) { toast((e as Error).message, 'err'); } };
 
@@ -27,9 +27,9 @@ export function dashboardView(): HTMLElement {
   const top = all.filter((i) => i.severity === 'error').slice(0, 8);
   const hw = hardwareTakeoff(p, p.doors);
   return h('div', { class: 'view' },
-    p.isSample ? h('div', { class: 'alert info' }, h('b', {}, 'Sample data. '), 'This project is illustrative sample data for trying the workflow. Create a new project or import a backup under Project data to start real work.') : null,
+    p.isSample ? h('div', { class: 'alert info' }, h('b', {}, 'Sample data. '), 'This project is illustrative sample data. Start real work with + New project (upload layouts, schedule and hardware sets).') : null,
     h('div', { class: 'view-head' }, h('div', {}, h('h1', {}, p.name), h('p', { class: 'muted' }, [p.number, p.client, p.location].filter(Boolean).join(' - ') || 'Project details not entered')),
-      h('div', { class: 'row gap' }, h('button', { class: 'btn', onclick: () => setUi({ view: 'doors' }) }, 'Door register'), h('button', { class: 'btn primary', onclick: () => setUi({ view: 'drawings' }) }, 'Drawing studio'))),
+      h('div', { class: 'row gap' }, h('button', { class: 'btn', onclick: () => setUi({ view: 'doors' }) }, 'Doors'), h('button', { class: 'btn', onclick: () => setUi({ view: 'render' }) }, '3D & Render'), h('button', { class: 'btn primary', onclick: () => setUi({ view: 'drawings' }) }, '2D Drawings'))),
     h('div', { class: 'kpis' },
       h('div', { class: 'kpi' }, h('b', {}, String(p.doors.length)), h('span', {}, 'Door records')),
       h('div', { class: 'kpi' }, h('b', {}, String(qty)), h('span', {}, 'Doors (qty)')),
@@ -57,23 +57,11 @@ export function dashboardView(): HTMLElement {
       h('section', { class: 'card' }, h('h3', {}, 'Blocking errors'),
         top.length ? h('ul', { class: 'issues' }, top.map((i) => h('li', { onclick: () => setUi({ view: 'doors', selectedDoorId: i.doorId }) }, sevBadge(i.severity), ' ', h('b', { class: 'mono' }, i.mark), ' ', i.message))) : h('p', { class: 'ok-text' }, 'No blocking errors.'),
         hw.unresolved.length ? h('div', {}, h('h4', {}, 'Hardware not resolved'), h('ul', { class: 'plain' }, hw.unresolved.map((u) => h('li', {}, u)))) : null),
-      h('section', { class: 'card' }, h('h3', {}, 'Workflow'),
-        h('ol', { class: 'steps' },
-          h('li', {}, h('b', {}, 'Project setup'), ' - buildings, floors, categories, title block data.'),
-          h('li', {}, h('b', {}, 'Door register'), ' - enter or import door data; blanks are flagged, never assumed.'),
-          h('li', {}, h('b', {}, 'Classify and validate'), ' - automatic categories plus project categories; QA rules.'),
-          h('li', {}, h('b', {}, 'Schedules'), ' - floor / category scoped door, quantity and hardware schedules.'),
-          h('li', {}, h('b', {}, '2D CAD'), ' - dimensioned DXF sheets for the same scope.'),
-          h('li', {}, h('b', {}, 'Issue'), ' - ZIP package: Excel, CSV, DXF per door, set DXF, manifest, backup.'))),
-      h('section', { class: 'card' }, h('h3', {}, 'Integration status'),
-        h('table', { class: 'kv' },
-          h('tr', {}, h('th', {}, 'Storage'), h('td', {}, storageAvailable() ? 'Browser storage (this device only). Use backups.' : 'Browser storage unavailable - export a backup before closing.')),
-          h('tr', {}, h('th', {}, 'DXF output'), h('td', {}, 'Available (AutoCAD R12 ASCII, mm)')),
-          h('tr', {}, h('th', {}, 'DWG output'), h('td', {}, 'Not available - needs a licensed DWG engine')),
-          h('tr', {}, h('th', {}, 'Drawing extraction (OCR)'), h('td', {}, 'Not configured - manual entry / JSON import')),
-          h('tr', {}, h('th', {}, '3D viewer'), h('td', {}, 'Not in this release (phase 5)')),
-          h('tr', {}, h('th', {}, 'Team database / login'), h('td', {}, 'Not configured (phase 6)')),
-        )),
+      p.intake ? h('section', { class: 'card' }, h('h3', {}, 'Started from'),
+        h('ul', { class: 'plain small' }, p.intake.files.map((f) => h('li', {}, h('b', {}, f.role === 'layout' ? 'Layout: ' : f.role === 'schedule' ? 'Schedule: ' : 'Hardware: '), f.name))),
+        h('h4', {}, 'Cross-check at intake'),
+        h('ul', { class: 'in-findings' }, p.intake.findings.filter((f) => f.sev !== 'ok').slice(0, 8).map((f) => h('li', { class: `sev-${f.sev}` }, h('span', { class: `badge sev-${f.sev}` }, f.sev), ' ', f.text))),
+        p.intake.findings.every((f) => f.sev === 'ok') ? h('p', { class: 'ok-text' }, 'All inputs agreed.') : null) : null,
     ),
   );
 }
@@ -156,31 +144,31 @@ export function dataView(): HTMLElement {
           h('select', { id: 'sample-pick', 'aria-label': 'Load a sample project', onchange: (e: Event) => { const s = SAMPLES.find((x) => x.key === (e.target as HTMLSelectElement).value); if (s) { addProject(s.build()); toast(`Loaded ${s.name}`, 'ok'); } } },
             h('option', { value: '' }, 'Load a sample project...'), SAMPLES.map((s) => h('option', { value: s.key, title: s.description }, s.name))))),
       h('section', { class: 'card' }, h('h3', {}, 'Share a demo'),
-        h('p', {}, 'Send this link to let anyone try DOCHS with the sample projects. Demo mode saves nothing and cannot see projects stored in your browser.'),
+        h('p', {}, 'Send this link to let anyone try DORSCH with the sample projects. Demo mode saves nothing and cannot see projects stored in your browser.'),
         h('div', { class: 'row gap' }, h('input', { id: 'demo-link', type: 'text', readonly: true, value: `${location.origin}${location.pathname}?demo`, class: 'grow' }),
           h('button', { class: 'btn', onclick: async () => { const v = `${location.origin}${location.pathname}?demo`; try { await navigator.clipboard.writeText(v); toast('Demo link copied', 'ok'); } catch { (document.getElementById('demo-link') as HTMLInputElement | null)?.select(); toast('Select the link and copy it', 'info'); } } }, 'Copy link'))),
       h('section', { class: 'card' }, h('h3', {}, 'Backup and restore'),
         h('p', {}, h('button', { class: 'btn', onclick: () => download(`${safeName(p.name)}_backup_${new Date().toISOString().slice(0, 10)}.json`, exportProject(p), 'application/json') }, 'Export JSON backup (current project)')),
         h('p', {}, h('button', { class: 'btn', onclick: () => file.click() }, 'Import JSON backup'), file),
-        h('p', { class: 'muted small' }, 'Imports accept DOCHS backups. Fields added in later versions are filled as blank and flagged by QA.')),
+        h('p', { class: 'muted small' }, 'Imports accept DORSCH backups. Fields added in later versions are filled as blank and flagged by QA.')),
       isDemo() ? null : aiCard(),
       h('section', { class: 'card' }, h('h3', {}, 'Reference drawing extraction'),
-        h('div', { class: 'alert warn' }, h('b', {}, 'Not configured. '), 'OCR / table extraction from PDF or images needs a server-side extraction service, which is not connected in this release. DOCHS does not simulate extraction. Enter doors manually or import a JSON backup.')),
+        h('div', { class: 'alert warn' }, h('b', {}, 'Not configured. '), 'OCR / table extraction from PDF or images needs a server-side extraction service, which is not connected in this release. DORSCH does not simulate extraction. Enter doors manually or import a JSON backup.')),
       h('section', { class: 'card' }, h('h3', {}, 'Open doors by floor'),
         h('ul', { class: 'plain' }, p.floors.slice().sort((a, b) => a.order - b.order).map((f) => h('li', {}, `${floorName(p, f.id)}: ${p.doors.filter((d) => d.floorId === f.id && d.status !== 'approved').length} not approved`)))),
     ),
   );
 }
 
-// Optional DOCHS API server (server/ in the repository) for AI-assisted features.
+// Optional DORSCH API server (server/ in the repository) for AI-assisted features.
 function aiCard(): HTMLElement {
   const cur = aiServer();
   const url = h('input', { id: 'ai-url', type: 'url', placeholder: 'https://your-dochs-server.example.com', value: cur?.url ?? '' }) as HTMLInputElement;
-  const token = h('input', { id: 'ai-token', type: 'password', placeholder: 'DOCHS server token', value: cur?.token ?? '', autocomplete: 'off' }) as HTMLInputElement;
+  const token = h('input', { id: 'ai-token', type: 'password', placeholder: 'DORSCH server token', value: cur?.token ?? '', autocomplete: 'off' }) as HTMLInputElement;
   const provider = h('select', { id: 'ai-provider' }, (['anthropic', 'xai', 'openai_compatible'] as const).map((p) => h('option', { value: p, selected: (cur?.provider ?? 'anthropic') === p }, p))) as HTMLSelectElement;
   const read = (): AiServer => ({ url: url.value.trim(), token: token.value.trim(), provider: provider.value as AiServer['provider'] });
   return h('section', { class: 'card' }, h('h3', {}, 'AI server (optional)'),
-    h('p', { class: 'muted small' }, 'Connect the DOCHS API server to get AI-suggested column matching on import. Provider API keys stay on the server; the server token is stored only in this browser. AI suggestions are always reviewed before anything is imported.'),
+    h('p', { class: 'muted small' }, 'Connect the DORSCH API server to get AI-suggested column matching on import. Provider API keys stay on the server; the server token is stored only in this browser. AI suggestions are always reviewed before anything is imported.'),
     h('div', { class: 'fields' }, h('label', { class: 'fld wide' }, h('span', {}, 'Server URL'), url), h('label', { class: 'fld' }, h('span', {}, 'Token'), token), h('label', { class: 'fld' }, h('span', {}, 'AI provider'), provider)),
     h('div', { class: 'row gap' },
       h('button', { class: 'btn', onclick: async () => { try { toast(await testServer(read()), 'ok'); } catch (e) { toast(`Connection failed: ${(e as Error).message}`, 'err'); } } }, 'Test connection'),

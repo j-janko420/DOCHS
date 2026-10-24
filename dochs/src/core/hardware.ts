@@ -7,7 +7,7 @@ import type { Issue, Severity } from './validate.js';
 // Hardware library logic: catalogue lookup, quantity rules with door-level
 // overrides, hardware QA rules and catalogue CSV import/export.
 
-const DATA = 'DOCHS data completeness rule';
+const DATA = 'DORSCH data completeness rule';
 const LIB = 'Project hardware library';
 const SPEC = 'Confirm against approved project specification / jurisdiction';
 

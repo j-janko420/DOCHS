@@ -7,11 +7,9 @@ import { toSvg } from '../../cad/svg.js';
 import { h, sevBadge } from '../dom.js';
 import { filterBar, filteredDoors } from '../filters.js';
 import { project, setUi, ui } from '../state.js';
-import { exportCsv, exportDoorDxf, exportPackage, exportXlsx, printSheet, scheduleTables, scopeLabel, setDxf, sheetFor } from '../exports.js';
+import { exportCsv, exportDoorDxf, exportDoorPdf, exportPackage, exportSetPdf, exportXlsx, scheduleTables, scopeLabel, setDxf, sheetFor } from '../exports.js';
+import { titleBlockPanel } from '../titleblock-ui.js';
 import { download, safeName, toast } from '../dom.js';
-import { viewer3d } from '../viewer3d.js';
-
-let mode3d = false;
 
 let tab = 0;
 
@@ -49,8 +47,9 @@ export function drawingsView(): HTMLElement {
   const doors = filteredDoors();
   const d = doors.find((x) => x.id === ui.selectedDoorId) ?? doors[0];
   const head = h('div', { class: 'view-head' },
-    h('div', {}, h('h1', {}, '2D CAD drawing studio'), h('p', { class: 'muted' }, 'Parametric sheets from the door register. Export is editable DXF (AutoCAD R12, mm). The preview is an SVG render of the same entities.')),
+    h('div', {}, h('h1', {}, '2D drawings'), h('p', { class: 'muted' }, 'A3 door sheets from the door register with your title block. PDF at true scale for issue; DXF (AutoCAD R12, mm) for editing in CAD.')),
     h('div', { class: 'row gap' },
+      h('button', { class: 'btn', onclick: () => doors.length && exportSetPdf(p, doors) }, `Drawing set PDF (${doors.length})`),
       h('button', { class: 'btn', onclick: () => {
         if (!doors.length) return;
         const r = setDxf(p, doors);
@@ -59,7 +58,7 @@ export function drawingsView(): HTMLElement {
         toast(`Set DXF: ${r.ok.length} sheets${r.blocked.length ? `, ${r.blocked.length} withheld` : ''}`, 'ok');
       } }, `Set DXF (${doors.length} in scope)`),
       h('button', { class: 'btn primary', onclick: () => exportPackage(p, doors) }, 'Issue package (.zip)')));
-  if (!d) return h('div', { class: 'view' }, head, filterBar({ status: true }), h('div', { class: 'card empty' }, 'No doors match the filters.'));
+  if (!d) return h('div', { class: 'view' }, head, titleBlockPanel(), filterBar({ status: true }), h('div', { class: 'card empty' }, 'No doors match the filters.'));
   const gate = drawable(d, p);
   const s = sheetFor(p, d);
   const W = s.paper[0] * s.S, H = s.paper[1] * s.S;
@@ -88,7 +87,7 @@ export function drawingsView(): HTMLElement {
   });
   host.addEventListener('pointerup', () => { drag = null; });
   const fit = () => { vb = { x: 0, y: 0, w: W, h: H }; apply(); };
-  return h('div', { class: 'view' }, head, filterBar({ status: true }),
+  return h('div', { class: 'view' }, head, titleBlockPanel(), filterBar({ status: true }),
     h('div', { class: 'studio' },
       h('aside', { class: 'card studio-list' },
         h('h3', {}, 'Doors in scope'),
@@ -105,15 +104,12 @@ export function drawingsView(): HTMLElement {
             [h('option', { value: '0', selected: !ui.mainScale }, `Auto (1:${s.S})`), ...MAIN_SCALE_OPTIONS.map((k) => h('option', { value: String(k), selected: ui.mainScale === k }, `1:${k}`))])),
           h('button', { class: 'btn sm', onclick: fit }, 'Fit'),
           h('span', { class: 'grow' }),
-          h('button', { class: 'btn', onclick: () => printSheet(p, d) }, 'Print / PDF'),
-          h('button', { class: 'btn primary', disabled: !gate.ok, title: gate.ok ? 'Download editable DXF' : 'Fix errors first', onclick: () => exportDoorDxf(p, d) }, 'Export DXF'),
+          h('button', { class: 'btn', disabled: !gate.ok, title: gate.ok ? 'Download this sheet as PDF (true scale)' : 'Fix errors first', onclick: () => exportDoorPdf(p, d) }, 'PDF'),
+          h('button', { class: 'btn primary', disabled: !gate.ok, title: gate.ok ? 'Download editable DXF' : 'Fix errors first', onclick: () => exportDoorDxf(p, d) }, 'DXF'),
         ),
         gate.ok ? null : h('div', { class: 'alert err' }, h('b', {}, `${d.mark}: DXF export blocked by ${gate.errors.length} error(s). `), gate.errors.map((e) => `${e.ruleId} ${e.message}`).join('; ')),
         d.status !== 'approved' && gate.ok ? h('div', { class: 'alert info' }, `Status is ${d.status}: the sheet carries a NOT FOR CONSTRUCTION banner until the door is approved.`) : null,
-        h('div', { class: 'tabs', role: 'tablist' },
-          h('button', { role: 'tab', class: `tab ${mode3d ? '' : 'on'}`, 'aria-selected': mode3d ? 'false' : 'true', onclick: () => { mode3d = false; setUi({}); } }, '2D drawing sheet'),
-          h('button', { role: 'tab', class: `tab ${mode3d ? 'on' : ''}`, 'aria-selected': mode3d ? 'true' : 'false', onclick: () => { mode3d = true; setUi({}); } }, '3D model')),
-        mode3d ? viewer3d(d, 'studio', 560) : host,
+        host,
         h('div', { class: 'layers' }, h('span', { class: 'muted small' }, 'Layers:'), LAYERS.map((l) => h('label', { class: 'layer' },
           h('input', { type: 'checkbox', checked: !ui.hiddenLayers.includes(l.name), onchange: (e: Event) => setUi({ hiddenLayers: (e.target as HTMLInputElement).checked ? ui.hiddenLayers.filter((x) => x !== l.name) : [...ui.hiddenLayers, l.name] }) }),
           h('i', { style: { background: l.svg } }), l.name))),
@@ -136,7 +132,7 @@ export function qaView(): HTMLElement {
   const c = counts(all);
   const list = all.filter((i) => !sevFilter || i.severity === sevFilter);
   return h('div', { class: 'view' },
-    h('div', { class: 'view-head' }, h('div', {}, h('h1', {}, 'QA and engineering checks'), h('p', { class: 'muted' }, 'Rule-based checks. Errors block DXF issue; warnings and info need review. Code and life-safety compliance is never decided by DOCHS.'))),
+    h('div', { class: 'view-head' }, h('div', {}, h('h1', {}, 'Checks'), h('p', { class: 'muted' }, 'Rule-based checks. Errors block DXF issue; warnings and info need review. Code and life-safety compliance is never decided by DORSCH.'))),
     filterBar({ status: true }),
     h('div', { class: 'kpis' },
       (['error', 'warning', 'info'] as Severity[]).map((s) => h('button', { class: `kpi sev-${s} ${sevFilter === s ? 'on' : ''}`, onclick: () => { sevFilter = sevFilter === s ? '' : s; setUi({}); } }, h('b', {}, String(c[s])), h('span', {}, s === 'error' ? 'Errors' : s === 'warning' ? 'Warnings' : 'Info')))),

@@ -7,7 +7,6 @@ import { exportProject } from '../core/project-ops.js';
 import { materialSchedule } from '../core/materials.js';
 import { composeSet, composeSheet, type Sheet } from '../cad/sheet.js';
 import { toDxf } from '../cad/dxf.js';
-import { toSvg } from '../cad/svg.js';
 import { toPdf, type PdfPageSpec } from '../cad/pdf.js';
 import { download, safeName, toast } from './dom.js';
 import { ui } from './state.js';
@@ -142,19 +141,4 @@ export function exportPackage(p: Project, doors: Door[]) {
   const r = buildPackage(p, doors);
   download(`${safeName(p.name)}_${safeName(scopeLabel(p))}_package.zip`, r.bytes, 'application/zip');
   toast(`Package exported: ${r.ok.length} drawings${r.blocked.length ? `, ${r.blocked.length} withheld (errors)` : ''}`, r.blocked.length ? 'info' : 'ok');
-}
-
-export function printSheet(p: Project, d: Door) {
-  const s = sheetFor(p, d);
-  const svg = toSvg(s.entities, { width: s.paper[0] * s.S, height: s.paper[1] * s.S, S: s.S, paperMm: s.paper, background: '#ffffff' });
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${s.drawingNo}</title><style>@page{size:${s.paper[0]}mm ${s.paper[1]}mm;margin:0}html,body{margin:0;padding:0;background:#fff}svg{display:block}</style></head><body>${svg}<script>window.onload=()=>{setTimeout(()=>window.print(),200)}<\/script></body></html>`;
-  const w = window.open('', '_blank');
-  if (!w) {
-    download(`${safeName(s.drawingNo)}.svg`, svg, 'image/svg+xml');
-    toast('Pop-up blocked: downloaded the sheet as SVG instead', 'info');
-    return;
-  }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
 }

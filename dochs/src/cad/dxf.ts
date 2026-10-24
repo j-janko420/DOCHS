@@ -65,7 +65,7 @@ export function toDxf(entities: Entity[], opt: { ltscale?: number; title?: strin
   const box = bbox(entities);
   const w = new W();
   // HEADER
-  w.g(999, clean(`DOCHS DoorChisolution - Designed by i3 Design - DXF R12 ${opt.title ?? ''}`.trim()));
+  w.g(999, clean(`DORSCH Door Schedule Solutions - Designed by i3 Design - DXF R12 ${opt.title ?? ''}`.trim()));
   w.g(0, 'SECTION'); w.g(2, 'HEADER');
   w.g(9, '$ACADVER'); w.g(1, 'AC1009');
   w.g(9, '$INSBASE'); w.pt([0, 0], 10);

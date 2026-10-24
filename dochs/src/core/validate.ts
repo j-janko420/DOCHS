@@ -19,8 +19,8 @@ export interface Issue {
   action: string; // corrective action
 }
 
-const GEO = 'DOCHS geometric consistency rule';
-const DATA = 'DOCHS data completeness rule';
+const GEO = 'DORSCH geometric consistency rule';
+const DATA = 'DORSCH data completeness rule';
 const PRJ = 'Project-defined requirement (door record)';
 const SPEC = 'Confirm against approved project specification / jurisdiction';
 export const FIT_TOLERANCE = 2; // mm
@@ -101,7 +101,7 @@ export function validateDoor(d: Door, p: Project): Issue[] {
   if (d.accessControl && !d.hardwareSet.trim()) add('W-HW-05', 'warning', 'accessControl', 'Access-controlled door without hardware set', 'accessControl and no set', DATA, 'Resolve access-control interface with the security consultant');
 
   if (isRated(d.fireRating)) {
-    add('I-FR-01', 'info', 'fireRating', `Fire rating ${d.fireRating}: compliance not assessed by DOCHS`, 'rating present', SPEC, 'Confirm certified assembly, frame, seals, glazing and hardware with the fire consultant');
+    add('I-FR-01', 'info', 'fireRating', `Fire rating ${d.fireRating}: compliance not assessed by DORSCH`, 'rating present', SPEC, 'Confirm certified assembly, frame, seals, glazing and hardware with the fire consultant');
     if (!d.smokeSeal) add('W-FR-02', 'warning', 'smokeSeal', 'Fire-rated door without smoke seal recorded', 'smokeSeal = no', SPEC, 'Confirm whether smoke seals are required');
     if (d.visionPanel) add('I-FR-03', 'info', 'visionPanel', 'Fire-rated door with vision panel', 'visionPanel = yes', SPEC, 'Confirm fire-rated glazing system and size limits');
   }
